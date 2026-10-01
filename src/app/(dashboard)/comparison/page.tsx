@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { BottomLinePanel } from "@/components/comparison/bottom-line-panel";
 import {
   ComparisonFilterBar,
+  ComparisonTypeToggle,
   IntervalSwitch,
   PeriodField,
   SideSelect,
@@ -100,15 +101,18 @@ export default function ComparisonPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2.5">
-        <h2 className="text-[22px] font-bold tracking-[-0.02em] text-foreground">Comparison</h2>
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-primary-soft px-2.5 py-1 text-xs font-medium text-primary-strong">
-          <span className="size-1.5 shrink-0 rounded-full bg-primary" />
-          {type === "channels" ? "Channel vs channel" : "Same channel"}
-        </span>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex min-w-0 flex-wrap items-center gap-2.5">
+          <h2 className="text-[22px] font-bold tracking-[-0.02em] text-foreground">Transaction comparison</h2>
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-primary-soft px-2.5 py-1 text-xs font-medium text-primary-strong">
+            <span className="size-1.5 shrink-0 rounded-full bg-primary" />
+            {type === "channels" ? "Channel vs channel" : "Same channel"}
+          </span>
+        </div>
+        <ComparisonTypeToggle type={type} onTypeChange={setType} />
       </div>
 
-      <ComparisonFilterBar type={type} onTypeChange={setType}>
+      <ComparisonFilterBar>
         {type === "channels" ? (
           <>
             <SideSelect

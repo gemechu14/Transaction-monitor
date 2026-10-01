@@ -26,40 +26,42 @@ const INTERVAL_OPTIONS: { value: Interval; label: string }[] = [
   { value: "month", label: "Month" },
 ];
 
-export function ComparisonFilterBar({
+/** Page-level switch between comparing two channels and one channel across two periods. */
+export function ComparisonTypeToggle({
   type,
   onTypeChange,
-  children,
 }: {
   type: ComparisonType;
   onTypeChange: (type: ComparisonType) => void;
-  children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-2xl border border-border bg-card px-5 pt-4 pb-[18px]">
-      <div className="inline-flex rounded-[10px] bg-muted p-1" role="group" aria-label="Comparison type">
-        {TYPE_OPTIONS.map((option) => {
-          const active = type === option.value;
-          return (
-            <button
-              key={option.value}
-              type="button"
-              aria-pressed={active}
-              onClick={() => onTypeChange(option.value)}
-              className={cn(
-                "inline-flex h-[34px] items-center gap-1.5 rounded-lg px-3.5 text-[13px] font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-primary",
-                active ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              <option.icon className="size-4" />
-              {option.label}
-            </button>
-          );
-        })}
-      </div>
-      <div className="mt-4 flex flex-wrap items-end gap-3 border-t border-line-soft pt-4 max-[760px]:flex-col max-[760px]:items-stretch">
-        {children}
-      </div>
+    <div className="inline-flex shrink-0 rounded-[10px] bg-muted p-1" role="group" aria-label="Comparison type">
+      {TYPE_OPTIONS.map((option) => {
+        const active = type === option.value;
+        return (
+          <button
+            key={option.value}
+            type="button"
+            aria-pressed={active}
+            onClick={() => onTypeChange(option.value)}
+            className={cn(
+              "inline-flex h-9 items-center gap-1.5 rounded-lg px-3.5 text-[13px] font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-primary",
+              active ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            <option.icon className="size-4" />
+            {option.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+export function ComparisonFilterBar({ children }: { children: React.ReactNode }) {
+  return (
+    <section className="flex flex-wrap items-end gap-3 rounded-2xl border border-border bg-card px-5 pt-4 pb-[18px] max-[760px]:flex-col max-[760px]:items-stretch">
+      {children}
     </section>
   );
 }

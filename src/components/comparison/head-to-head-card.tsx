@@ -79,7 +79,7 @@ function SidePanel({ side, figures, leads }: { side: SideKey; figures: SideFigur
       </div>
 
       <p className="mt-4 text-xs text-muted-foreground">Amount</p>
-      <p className="text-[34px] leading-tight font-bold whitespace-nowrap text-foreground tabular-nums max-[900px]:text-[28px]">
+      <p className="text-[32px] leading-tight font-bold whitespace-nowrap text-foreground tabular-nums max-[1640px]:text-[28px] max-[620px]:text-2xl">
         {figures.amount === null ? "No data" : formatAmount(figures.amount)}
       </p>
 
