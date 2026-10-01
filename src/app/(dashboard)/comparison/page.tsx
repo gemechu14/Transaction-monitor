@@ -1,171 +1,182 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ArrowLeftRight, Layers } from "lucide-react";
 
-import { ComparisonStatGrid } from "@/components/comparison/comparison-stat-grid";
-import { ComparisonSummary } from "@/components/comparison/comparison-summary";
-import { CrossPlatformPanel, type PlatformSelection } from "@/components/comparison/cross-platform-panel";
-import { SamePlatformPanel } from "@/components/comparison/same-platform-panel";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CHANNELS, type ChannelId } from "@/config/channels";
-import { useChannelSummary } from "@/hooks";
-import { aggregateChannelSummaries } from "@/lib/aggregate-channel-summary";
-import { formatDateRangeLabel, getLastNDays, type DateRange } from "@/lib/date";
+import { BottomLinePanel } from "@/components/comparison/bottom-line-panel";
 import {
-  buildDayOptions,
-  buildMonthOptions,
-  buildWeekOptions,
-  type ComparisonMode,
-  type PeriodOption,
-} from "@/lib/period-options";
+  ComparisonFilterBar,
+  IntervalSwitch,
+  PeriodField,
+  SideSelect,
+  SwapButton,
+  type FieldOption,
+} from "@/components/comparison/comparison-filter-bar";
+import { HeadToHeadCard } from "@/components/comparison/head-to-head-card";
+import { KeyInsightsCard } from "@/components/comparison/key-insights-card";
+import { ShareOfAmountCard } from "@/components/comparison/share-of-amount-card";
+import { CHANNEL_LIST, type ChannelId } from "@/config/channels";
+import { useOverviewDataset } from "@/hooks";
+import {
+  bottomLine,
+  buildPeriodOptions,
+  channelInsights,
+  defaultPeriodIds,
+  figuresFor,
+  nextOptionId,
+  periodFigures,
+  periodInsights,
+  sideName,
+  type ComparisonType,
+  type Interval,
+  type SideFigures,
+  type SideKey,
+} from "@/lib/comparison";
+import { DEFAULT_PERIOD, formatRangeLabel, type OverviewPeriod } from "@/lib/overview";
 
-type ComparisonTab = "same" | "cross";
+const CHANNEL_OPTIONS: FieldOption[] = CHANNEL_LIST.map((c) => ({ id: c.id, label: c.name }));
+const PLATFORM_OPTIONS: FieldOption[] = [{ id: "all", label: "All platforms" }, ...CHANNEL_OPTIONS];
+const CHANNEL_IDS = CHANNEL_LIST.map((c) => c.id);
 
-function platformLabel(channel: ChannelId | "all"): string {
-  return channel === "all" ? "All platforms" : (CHANNELS[channel]?.name ?? channel);
+const EMPTY_SIDE: SideFigures = { name: "", amount: null, transactions: null };
+
+/** Sets one side, and if that now matches the other side, moves the other side on to the next option. */
+function pickSide<T extends string>(pair: { a: T; b: T }, side: SideKey, id: T, ids: T[]): { a: T; b: T } {
+  const other: SideKey = side === "a" ? "b" : "a";
+  const next = { ...pair, [side]: id };
+  if (next[other] === id) next[other] = nextOptionId(ids, id, id);
+  return next;
 }
 
 export default function ComparisonPage() {
-  const [tab, setTab] = useState<ComparisonTab>("same");
+  const [type, setType] = useState<ComparisonType>("channels");
 
-  const dayOptions = useMemo(() => buildDayOptions(), []);
-  const weekOptions = useMemo(() => buildWeekOptions(), []);
-  const monthOptions = useMemo(() => buildMonthOptions(), []);
-  const optionsByMode: Record<ComparisonMode, PeriodOption[]> = {
-    day: dayOptions,
-    week: weekOptions,
-    month: monthOptions,
-  };
+  // Channel vs channel
+  const [channels, setChannels] = useState<{ a: ChannelId; b: ChannelId }>({ a: "telebirr", b: "mbesa_p2p" });
+  const [period, setPeriod] = useState<OverviewPeriod>(DEFAULT_PERIOD);
 
-  const [samePlatform, setSamePlatform] = useState<ChannelId | "all">("all");
-  const [sameMode, setSameMode] = useState<ComparisonMode>("day");
-  const [sameSelection, setSameSelection] = useState<Record<ComparisonMode, { a: string; b: string }>>(
-    () => ({
-      day: { a: dayOptions[1].value, b: dayOptions[0].value },
-      week: { a: weekOptions[1].value, b: weekOptions[0].value },
-      month: { a: monthOptions[1].value, b: monthOptions[0].value },
-    }),
-  );
+  // Same channel
+  const [sameChannel, setSameChannel] = useState<ChannelId | "all">("all");
+  const [interval, setIntervalKind] = useState<Interval>("day");
+  // `null` means "this interval's defaults", so they can be worked out once the data has loaded.
+  const [periodIds, setPeriodIds] = useState<{ a: string; b: string } | null>(null);
 
-  const sameOptions = optionsByMode[sameMode];
-  const sameCurrent = sameSelection[sameMode];
-  const sameOptionA = sameOptions.find((o) => o.value === sameCurrent.a) ?? sameOptions[1];
-  const sameOptionB = sameOptions.find((o) => o.value === sameCurrent.b) ?? sameOptions[0];
+  const datasetQuery = useOverviewDataset();
+  const dataset = datasetQuery.data;
+  const isLoading = datasetQuery.isLoading || !dataset;
 
-  function setSameSide(side: "a" | "b", value: string) {
-    setSameSelection((prev) => ({ ...prev, [sameMode]: { ...prev[sameMode], [side]: value } }));
-  }
+  const periodOptions = useMemo(() => (dataset ? buildPeriodOptions(dataset, interval) : []), [dataset, interval]);
+  const periodIdList = periodOptions.map((o) => o.id);
+  const selectedPeriods = periodIds ?? defaultPeriodIds(periodOptions);
 
-  const [crossRange, setCrossRange] = useState<DateRange>(() => getLastNDays(30));
-  const [crossA, setCrossA] = useState<PlatformSelection>(() => ({ channel: "telebirr" }));
-  const [crossB, setCrossB] = useState<PlatformSelection>(() => ({ channel: "mbesa_p2p" }));
+  const result = useMemo(() => {
+    if (!dataset) return null;
 
-  const resolved =
-    tab === "same"
-      ? {
-          channelA: samePlatform,
-          rangeA: sameOptionA.range,
-          labelA: `${platformLabel(samePlatform)} · ${sameOptionA.label}`,
-          channelB: samePlatform,
-          rangeB: sameOptionB.range,
-          labelB: `${platformLabel(samePlatform)} · ${sameOptionB.label}`,
-        }
-      : {
-          channelA: crossA.channel,
-          rangeA: crossRange,
-          labelA: `${platformLabel(crossA.channel)} · ${formatDateRangeLabel(crossRange)}`,
-          channelB: crossB.channel,
-          rangeB: crossRange,
-          labelB: `${platformLabel(crossB.channel)} · ${formatDateRangeLabel(crossRange)}`,
-        };
+    if (type === "channels") {
+      const a: SideFigures = { name: sideName(channels.a), ...figuresFor(dataset, channels.a, period.range) };
+      const b: SideFigures = { name: sideName(channels.b), ...figuresFor(dataset, channels.b, period.range) };
+      const totals = figuresFor(dataset, "all", period.range);
+      const periodDays = dataset.daily.filter((d) => d.date >= period.range.from && d.date <= period.range.to).length;
+      return {
+        a,
+        b,
+        insights: channelInsights(a, b, totals, periodDays),
+        line: bottomLine(a, b, { periodLabel: formatRangeLabel(period.range) }),
+      };
+    }
 
-  const queryA = useChannelSummary({
-    ...resolved.rangeA,
-    channel: resolved.channelA === "all" ? undefined : resolved.channelA,
-  });
-  const queryB = useChannelSummary({
-    ...resolved.rangeB,
-    channel: resolved.channelB === "all" ? undefined : resolved.channelB,
-  });
-
-  const isLoading = queryA.isLoading || queryB.isLoading;
-  const aggA = useMemo(() => aggregateChannelSummaries(queryA.data ?? []), [queryA.data]);
-  const aggB = useMemo(() => aggregateChannelSummaries(queryB.data ?? []), [queryB.data]);
+    const optionA = periodOptions.find((o) => o.id === selectedPeriods.a);
+    const optionB = periodOptions.find((o) => o.id === selectedPeriods.b);
+    if (!optionA || !optionB) return null;
+    const caption = sideName(sameChannel);
+    const a: SideFigures = { name: optionA.shortLabel, caption, ...periodFigures(dataset, sameChannel, optionA) };
+    const b: SideFigures = { name: optionB.shortLabel, caption, ...periodFigures(dataset, sameChannel, optionB) };
+    return {
+      a,
+      b,
+      insights: periodInsights(a, b),
+      line: bottomLine(a, b, { prefix: caption }),
+    };
+  }, [dataset, type, channels, period.range, periodOptions, selectedPeriods.a, selectedPeriods.b, sameChannel]);
 
   return (
     <div className="space-y-4">
-      <div className="sticky -top-4 z-20 -mx-4 -mt-2 flex flex-col gap-3 border-b border-border bg-background px-4 py-3 sm:-top-6 sm:-mx-6 sm:px-6 lg:flex-row lg:items-start lg:justify-between">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-base font-bold text-foreground sm:text-lg">Comparison</h1>
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
-              <span className="size-1.5 shrink-0 rounded-full bg-primary" />
-              {tab === "same" ? "Same platform" : "Cross-platform"}
-            </span>
-          </div>
-        </div>
+      <div className="flex flex-wrap items-center gap-2.5">
+        <h2 className="text-[22px] font-bold tracking-[-0.02em] text-foreground">Comparison</h2>
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-primary-soft px-2.5 py-1 text-xs font-medium text-primary-strong">
+          <span className="size-1.5 shrink-0 rounded-full bg-primary" />
+          {type === "channels" ? "Channel vs channel" : "Same channel"}
+        </span>
       </div>
 
-      <Tabs value={tab} onValueChange={(value) => setTab(value as ComparisonTab)}>
-        <TabsList className="h-11 gap-1 rounded-xl bg-muted/60 p-1 shadow-inner">
-          <TabsTrigger
-            value="cross"
-            className="gap-1.5 rounded-lg px-4 text-sm font-semibold data-active:bg-background data-active:text-primary data-active:shadow-md"
-          >
-            <ArrowLeftRight className="size-4" />
-            Cross-platform
-          </TabsTrigger>
-          <TabsTrigger
-            value="same"
-            className="gap-1.5 rounded-lg px-4 text-sm font-semibold data-active:bg-background data-active:text-primary data-active:shadow-md"
-          >
-            <Layers className="size-4" />
-            Same platform
-          </TabsTrigger>
-        </TabsList>
+      <ComparisonFilterBar type={type} onTypeChange={setType}>
+        {type === "channels" ? (
+          <>
+            <SideSelect
+              label="Channel A"
+              side="a"
+              value={channels.a}
+              options={CHANNEL_OPTIONS}
+              disabledId={channels.b}
+              onChange={(id) => setChannels((pair) => pickSide(pair, "a", id as ChannelId, CHANNEL_IDS))}
+            />
+            <SwapButton label="Swap channels" onClick={() => setChannels(({ a, b }) => ({ a: b, b: a }))} />
+            <SideSelect
+              label="Channel B"
+              side="b"
+              value={channels.b}
+              options={CHANNEL_OPTIONS}
+              disabledId={channels.a}
+              onChange={(id) => setChannels((pair) => pickSide(pair, "b", id as ChannelId, CHANNEL_IDS))}
+            />
+            <PeriodField value={period} onChange={setPeriod} dataFrom={dataset?.from} />
+          </>
+        ) : (
+          <>
+            <SideSelect
+              label="Channel"
+              value={sameChannel}
+              options={PLATFORM_OPTIONS}
+              onChange={(id) => setSameChannel(id as ChannelId | "all")}
+            />
+            <IntervalSwitch
+              value={interval}
+              onChange={(next) => {
+                setIntervalKind(next);
+                setPeriodIds(null);
+              }}
+            />
+            <SideSelect
+              label="Period A"
+              side="a"
+              value={selectedPeriods.a}
+              options={periodOptions}
+              disabledId={selectedPeriods.b}
+              onChange={(id) => setPeriodIds(pickSide(selectedPeriods, "a", id, periodIdList))}
+            />
+            <SwapButton
+              label="Swap periods"
+              onClick={() => setPeriodIds({ a: selectedPeriods.b, b: selectedPeriods.a })}
+            />
+            <SideSelect
+              label="Period B"
+              side="b"
+              value={selectedPeriods.b}
+              options={periodOptions}
+              disabledId={selectedPeriods.a}
+              onChange={(id) => setPeriodIds(pickSide(selectedPeriods, "b", id, periodIdList))}
+            />
+          </>
+        )}
+      </ComparisonFilterBar>
 
-        <TabsContent value="same" className="mt-4">
-          <SamePlatformPanel
-            platform={samePlatform}
-            onPlatformChange={setSamePlatform}
-            mode={sameMode}
-            onModeChange={setSameMode}
-            options={sameOptions}
-            optionA={sameOptionA}
-            optionB={sameOptionB}
-            onChangeA={(value) => setSameSide("a", value)}
-            onChangeB={(value) => setSameSide("b", value)}
-          />
-        </TabsContent>
+      <HeadToHeadCard a={result?.a ?? EMPTY_SIDE} b={result?.b ?? EMPTY_SIDE} isLoading={isLoading} />
 
-        <TabsContent value="cross" className="mt-4">
-          <CrossPlatformPanel
-            a={crossA}
-            onChangeA={setCrossA}
-            b={crossB}
-            onChangeB={setCrossB}
-            range={crossRange}
-            onRangeChange={setCrossRange}
-          />
-        </TabsContent>
-      </Tabs>
+      <div className="grid grid-cols-1 gap-3 min-[1001px]:grid-cols-2">
+        <KeyInsightsCard insights={result?.insights ?? []} isLoading={isLoading} />
+        <ShareOfAmountCard a={result?.a ?? EMPTY_SIDE} b={result?.b ?? EMPTY_SIDE} isLoading={isLoading} />
+      </div>
 
-      <ComparisonStatGrid
-        labelA={resolved.labelA}
-        labelB={resolved.labelB}
-        a={aggA}
-        b={aggB}
-        isLoading={isLoading}
-      />
-
-      <ComparisonSummary
-        labelA={resolved.labelA}
-        labelB={resolved.labelB}
-        a={aggA}
-        b={aggB}
-        isLoading={isLoading}
-      />
+      <BottomLinePanel line={result?.line ?? null} isLoading={isLoading} />
     </div>
   );
 }

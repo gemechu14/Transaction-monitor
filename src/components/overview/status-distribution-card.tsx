@@ -1,82 +1,81 @@
 "use client";
 
-import { DonutChart, type DonutDatum } from "@/components/charts/donut-chart";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { SectionCard } from "@/components/overview/section-card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { STATUS_COLORS } from "@/config/colors";
-import { STATUS_CONFIG, type TransactionStatus } from "@/config/status";
-import { formatPercent } from "@/lib/format";
-import type { ChannelSummary } from "@/types/api";
+import { formatCompactNumber } from "@/lib/format";
+import type { OverviewStatusBreakdown } from "@/types/api";
 
+const SEGMENTS: {
+  id: keyof OverviewStatusBreakdown;
+  label: string;
+  color: string;
+  /** Counts are approximate for these, so they read "≈ 683.9K". */
+  approximate?: boolean;
+  /** Small counts read better in full, e.g. "8,257". */
+  full?: boolean;
+}[] = [
+  { id: "success", label: "Success", color: "var(--primary)", approximate: true },
+  { id: "failed", label: "Failed", color: "var(--bad)" },
+  { id: "reversed", label: "Reversed", color: "var(--reversed)", full: true },
+  { id: "pending", label: "Pending", color: "var(--orange)", approximate: true },
+];
+
+/** How every transaction in the base period ended. Not filtered by period or platform. */
 export function StatusDistributionCard({
   data,
   isLoading,
 }: {
-  data: ChannelSummary[];
+  data?: OverviewStatusBreakdown;
   isLoading?: boolean;
 }) {
-  const total = data.reduce((acc, s) => acc + s.transactionCount, 0);
-  const failed = data.reduce((acc, s) => acc + s.failedCount, 0);
-  const pending = data.reduce((acc, s) => acc + s.pendingCount, 0);
-  const reversed = data.reduce((acc, s) => acc + s.reversedCount, 0);
-  const success = Math.max(0, total - failed - pending - reversed);
-  const successRate = total ? success / total : 0;
-
-  const rows: { id: TransactionStatus; value: number }[] = [
-    { id: "success", value: success },
-    { id: "failed", value: failed },
-    { id: "pending", value: pending },
-    { id: "reversed", value: reversed },
-  ];
-
-  const donutData: DonutDatum[] = rows.map((row) => ({
-    key: row.id,
-    label: STATUS_CONFIG[row.id].label,
-    value: row.value,
-    color: STATUS_COLORS[row.id].fg,
-  }));
+  const total = data ? data.success + data.failed + data.reversed + data.pending : 0;
+  const pct = (count: number) => (total ? (count / total) * 100 : 0);
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Status distribution</CardTitle>
-        <CardDescription>Success, failed, pending and reversed outcomes</CardDescription>
-      </CardHeader>
-      <CardContent>
-        {isLoading ? (
-          <Skeleton className="h-40 w-full" />
-        ) : (
-          <div className="flex animate-in fade-in slide-in-from-bottom-2 flex-wrap items-center gap-6 duration-500 ease-out">
-            <DonutChart
-              data={donutData}
-              centerLabel="Success rate"
-              centerValue={formatPercent(successRate, 1)}
-            />
-            <ul className="min-w-40 flex-1 space-y-2">
-              {rows.map((row) => (
-                <li key={row.id} className="flex items-center justify-between gap-2 text-sm">
-                  <span className="flex items-center gap-2 text-foreground">
-                    <span
-                      className="size-2 rounded-full"
-                      style={{ backgroundColor: STATUS_COLORS[row.id].fg }}
-                    />
-                    {STATUS_CONFIG[row.id].label}
-                  </span>
-                  <span className="font-medium text-foreground">
-                    {formatPercent(total ? row.value / total : 0, 1)}
-                  </span>
-                </li>
-              ))}
-            </ul>
+    <SectionCard title="Transaction status" description="How transactions ended this month">
+      {isLoading || !data ? (
+        <Skeleton className="h-44 w-full" />
+      ) : (
+        <>
+          <p className="text-[40px] leading-none font-semibold text-foreground tabular-nums">
+            {pct(data.success).toFixed(1)}%
+            <span className="ml-2 align-middle text-sm font-normal text-muted-foreground">
+              completed successfully
+            </span>
+          </p>
+
+          <div className="mt-5 flex h-3.5 gap-0.5 overflow-hidden rounded-full" aria-hidden>
+            {SEGMENTS.map((segment) => (
+              <span
+                key={segment.id}
+                className="h-full first:rounded-l-full last:rounded-r-full"
+                style={{ width: `${pct(data[segment.id])}%`, backgroundColor: segment.color }}
+              />
+            ))}
           </div>
-        )}
-      </CardContent>
-    </Card>
+
+          <ul className="mt-5 grid grid-cols-2 gap-3">
+            {SEGMENTS.map((segment) => {
+              const count = data[segment.id];
+              const countLabel = segment.full
+                ? count.toLocaleString("en-US")
+                : `${segment.approximate ? "≈ " : ""}${formatCompactNumber(count)}`;
+              return (
+                <li key={segment.id} className="rounded-xl bg-muted px-4 py-3">
+                  <p className="flex items-center gap-2 text-[13px] text-foreground-2">
+                    <span className="size-2 rounded-full" style={{ backgroundColor: segment.color }} />
+                    {segment.label}
+                  </p>
+                  <p className="mt-1 text-lg font-semibold text-foreground tabular-nums">
+                    {pct(count).toFixed(1)}%
+                    <span className="ml-1.5 text-xs font-normal text-muted-foreground">({countLabel})</span>
+                  </p>
+                </li>
+              );
+            })}
+          </ul>
+        </>
+      )}
+    </SectionCard>
   );
 }

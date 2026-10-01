@@ -2,24 +2,16 @@
 
 import { useMemo, useState } from "react";
 import { Download } from "lucide-react";
-import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { SectionCard } from "@/components/overview/section-card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CHANNELS } from "@/config/channels";
-import { NEUTRAL_BORDER, NEUTRAL_TEXT } from "@/config/colors";
-import { formatCompactNumber, formatCurrencyCompact, formatPercent } from "@/lib/format";
+import { CHANNELS, type ChannelId } from "@/config/channels";
+import { formatCompactNumber } from "@/lib/format";
+import { formatEtb, niceAxisMax } from "@/lib/overview";
 import { cn } from "@/lib/utils";
-import type { ChannelSummary } from "@/types/api";
+import type { OverviewChannelRow } from "@/types/api";
 
-type Metric = "volume" | "value" | "success" | "failure" | "avgTicket" | "latency" | "netPosition";
+type Metric = "volume" | "value" | "success" | "failure" | "avgTicket";
 
 const METRIC_OPTIONS: { value: Metric; label: string }[] = [
   { value: "volume", label: "Volume" },
@@ -27,26 +19,23 @@ const METRIC_OPTIONS: { value: Metric; label: string }[] = [
   { value: "success", label: "Success" },
   { value: "failure", label: "Failure" },
   { value: "avgTicket", label: "Avg ticket" },
-  { value: "latency", label: "Latency" },
-  { value: "netPosition", label: "Net position" },
 ];
 
-function metricValue(summary: ChannelSummary, metric: Metric): number {
+/** Metrics a non-admin user may see. */
+const USER_METRICS = new Set<Metric>(["volume", "avgTicket", "value"]);
+
+function metricValue(row: OverviewChannelRow, metric: Metric): number {
   switch (metric) {
     case "volume":
-      return summary.transactionCount;
+      return row.transactionCount;
     case "value":
-      return summary.totalValue;
+      return row.totalValue;
     case "success":
-      return summary.successRate;
+      return row.successRate;
     case "failure":
-      return summary.transactionCount ? summary.failedCount / summary.transactionCount : 0;
+      return 1 - row.successRate;
     case "avgTicket":
-      return summary.transactionCount ? summary.totalValue / summary.transactionCount : 0;
-    case "latency":
-      return summary.avgLatencyMs ?? 0;
-    case "netPosition":
-      return summary.incomingValue - summary.outgoingValue;
+      return row.transactionCount ? row.totalValue / row.transactionCount : 0;
   }
 }
 
@@ -54,206 +43,196 @@ function formatMetric(value: number, metric: Metric): string {
   switch (metric) {
     case "success":
     case "failure":
-      return formatPercent(value, 1);
+      return `${(value * 100).toFixed(1)}%`;
     case "value":
     case "avgTicket":
-    case "netPosition":
-      return formatCurrencyCompact(value);
-    case "latency":
-      return `${Math.round(value)} ms`;
+      return formatEtb(value);
     case "volume":
-    default:
       return formatCompactNumber(value);
   }
 }
 
-function downloadChannelSummaryCsv(rows: ChannelSummary[]) {
-  const header = [
-    "Channel",
-    "Transactions",
-    "Value",
-    "Success rate",
-    "Failed",
-    "Net position",
-    "Avg latency (ms)",
-  ];
-  const lines = rows.map((s) => {
-    const name = CHANNELS[s.channel]?.name ?? s.channel;
-    return [
-      name,
-      s.transactionCount,
-      s.totalValue,
-      (s.successRate * 100).toFixed(2),
-      s.failedCount,
-      s.incomingValue - s.outgoingValue,
-      s.avgLatencyMs ?? "",
-    ].join(",");
+/** Axis bounds per metric: fixed where the spec fixes them, otherwise a rounded max. */
+function axisFor(metric: Metric, rows: OverviewChannelRow[]): { min: number; max: number } {
+  switch (metric) {
+    case "volume":
+      return { min: 0, max: 200_000 };
+    case "success":
+      return { min: 0.88, max: 1 };
+    case "failure":
+      return { min: 0, max: 0.1 };
+    default:
+      return { min: 0, max: niceAxisMax(Math.max(...rows.map((r) => metricValue(r, metric)), 0)) };
+  }
+}
+
+function downloadCsv(rows: OverviewChannelRow[], restricted: boolean) {
+  const total = rows.reduce((acc, r) => acc + r.transactionCount, 0);
+  const header = restricted
+    ? ["Channel", "Transactions", "Value", "Avg ticket", "Share %"]
+    : ["Channel", "Transactions", "Value", "Success %", "Failure %", "Avg ticket", "Share %"];
+  const lines = rows.map((r) => {
+    const avgTicket = r.transactionCount ? Math.round(r.totalValue / r.transactionCount) : 0;
+    const share = total ? ((r.transactionCount / total) * 100).toFixed(2) : 0;
+    const name = CHANNELS[r.channel]?.name ?? r.channel;
+    return (
+      restricted
+        ? [name, r.transactionCount, r.totalValue, avgTicket, share]
+        : [
+            name,
+            r.transactionCount,
+            r.totalValue,
+            (r.successRate * 100).toFixed(2),
+            ((1 - r.successRate) * 100).toFixed(2),
+            avgTicket,
+            share,
+          ]
+    ).join(",");
   });
-  const csv = [header.join(","), ...lines].join("\n");
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const blob = new Blob([[header.join(","), ...lines].join("\n")], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = "channel-performance.csv";
+  link.download = "channel-performance-sep-2026.csv";
   link.click();
   URL.revokeObjectURL(url);
 }
 
 export function ChannelPerformanceCard({
   data,
+  selected,
   isLoading,
+  restricted = false,
 }: {
-  data: ChannelSummary[];
+  data: OverviewChannelRow[];
+  selected: ChannelId | "all";
   isLoading?: boolean;
+  /** Non-admin view: only volume, avg ticket and value. */
+  restricted?: boolean;
 }) {
   const [metric, setMetric] = useState<Metric>("volume");
-  const totalCount = data.reduce((acc, s) => acc + s.transactionCount, 0);
+  const metricOptions = restricted
+    ? METRIC_OPTIONS.filter((option) => USER_METRICS.has(option.value))
+    : METRIC_OPTIONS;
+  const total = data.reduce((acc, r) => acc + r.transactionCount, 0);
 
+  // Every metric ranks highest first.
   const sorted = useMemo(
     () => [...data].sort((a, b) => metricValue(b, metric) - metricValue(a, metric)),
     [data, metric],
   );
-
-  const chartRows = sorted.map((s) => ({
-    channel: s.channel,
-    name: CHANNELS[s.channel]?.shortName ?? s.channel,
-    value: metricValue(s, metric),
-    color: CHANNELS[s.channel]?.color ?? NEUTRAL_TEXT,
-  }));
+  const axis = axisFor(metric, data);
+  const ticks = [0, 0.25, 0.5, 0.75, 1].map((f) => axis.min + f * (axis.max - axis.min));
+  const widthFor = (value: number) =>
+    Math.min(100, Math.max(0, ((value - axis.min) / (axis.max - axis.min || 1)) * 100));
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex flex-col items-start gap-3 @lg/card-header:flex-row @lg/card-header:items-center @lg/card-header:justify-between">
-          <div>
-            <CardTitle>Channel performance</CardTitle>
-            <CardDescription>
-              Ranked comparison of integrated payment channels and partner banks
-            </CardDescription>
-          </div>
-          <div className="flex flex-wrap items-center gap-1.5">
-            {METRIC_OPTIONS.map((option) => (
-              <Button
-                key={option.value}
-                size="sm"
-                variant="outline"
-                className={cn(
-                  "h-7 px-2.5 text-xs",
-                  metric === option.value
-                    ? "border-primary/50 bg-primary/10 text-primary hover:bg-primary/15"
-                    : "text-muted-foreground",
-                )}
-                onClick={() => setMetric(option.value)}
-              >
-                {option.label}
-              </Button>
-            ))}
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-7 gap-1 px-2.5 text-xs text-muted-foreground"
-              onClick={() => downloadChannelSummaryCsv(sorted)}
+    <SectionCard
+      title="Channel performance"
+      description="Ranked comparison of integrated payment channels and partner banks"
+      actions={
+        <>
+          {metricOptions.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              aria-pressed={metric === option.value}
+              onClick={() => setMetric(option.value)}
+              className={cn(
+                "h-[38px] rounded-full border px-4 text-[13px] font-medium transition-colors focus-visible:outline-2 focus-visible:outline-primary",
+                metric === option.value
+                  ? "border-primary bg-primary-soft text-primary-strong"
+                  : "border-border text-foreground-2 hover:bg-muted",
+              )}
             >
-              <Download className="size-3.5" />
-              CSV
-            </Button>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent>
-        {isLoading ? (
-          <Skeleton className="h-72 w-full" />
-        ) : (
-          <div
-            key={metric}
-            className="grid animate-in fade-in slide-in-from-bottom-2 gap-6 duration-500 ease-out lg:grid-cols-[1.3fr_1fr]"
+              {option.label}
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={() => downloadCsv(sorted, restricted)}
+            className="inline-flex h-9 items-center gap-1.5 rounded-[10px] border border-border px-3 text-[13px] font-medium text-foreground-2 hover:bg-muted focus-visible:outline-2 focus-visible:outline-primary"
           >
-            <div className="h-72 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={chartRows}
-                  layout="vertical"
-                  margin={{ top: 4, right: 16, left: 8, bottom: 4 }}
-                >
-                  <XAxis
-                    type="number"
-                    tickFormatter={(value) => formatMetric(value, metric)}
-                    tick={{ fontSize: 11, fill: NEUTRAL_TEXT }}
-                    axisLine={{ stroke: NEUTRAL_BORDER }}
-                    tickLine={false}
-                  />
-                  <YAxis
-                    type="category"
-                    dataKey="name"
-                    width={92}
-                    tick={{ fontSize: 12, fill: NEUTRAL_TEXT }}
-                    axisLine={false}
-                    tickLine={false}
-                  />
-                  <Tooltip
-                    cursor={{ fill: "rgba(0,0,0,0.03)" }}
-                    contentStyle={{
-                      borderRadius: 8,
-                      fontSize: 12,
-                      border: `1px solid ${NEUTRAL_BORDER}`,
-                    }}
-                    formatter={(value) => [formatMetric(Number(value), metric), "Value"]}
-                  />
-                  <Bar
-                    dataKey="value"
-                    radius={[0, 4, 4, 0]}
-                    barSize={16}
-                    isAnimationActive
-                    animationDuration={600}
-                    animationEasing="ease-out"
-                  >
-                    {chartRows.map((row) => (
-                      <Cell key={row.channel} fill={row.color} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-            <ol className="flex flex-col divide-y divide-border">
-              {sorted.map((summary, index) => {
-                const config = CHANNELS[summary.channel];
+            <Download className="size-3.5" />
+            CSV
+          </button>
+        </>
+      }
+    >
+      {isLoading ? (
+        <Skeleton className="h-[340px] w-full" />
+      ) : (
+        <div className="grid gap-x-10 gap-y-4 min-[901px]:grid-cols-[1.15fr_1fr]">
+          <div>
+            <ul aria-label={`Channels by ${metric}`}>
+              {sorted.map((row) => {
+                const value = metricValue(row, metric);
+                const faded = selected !== "all" && selected !== row.channel;
                 return (
-                  <li
-                    key={summary.channel}
-                    className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0"
-                  >
-                    <span className="w-4 text-xs font-medium text-muted-foreground">
-                      {index + 1}
+                  <li key={row.channel} className="flex h-11 items-center gap-3">
+                    <span className="w-20 shrink-0 truncate text-[13px] text-foreground-2">
+                      {CHANNELS[row.channel]?.shortName ?? row.channel}
                     </span>
-                    <span
-                      className="size-2 shrink-0 rounded-full"
-                      style={{ backgroundColor: config?.color }}
-                    />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-foreground">
-                        {config?.name ?? summary.channel}
-                      </p>
-                      <p className="truncate text-xs text-muted-foreground">
-                        {formatCompactNumber(summary.transactionCount)} txns ·{" "}
-                        {formatCurrencyCompact(summary.totalValue)}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm font-semibold text-foreground">
-                        {formatPercent(summary.successRate, 1)}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {formatPercent(totalCount ? summary.transactionCount / totalCount : 0, 1)}{" "}
-                        share
-                      </p>
-                    </div>
+                    <span className="h-3.5 flex-1 overflow-hidden rounded-[4px] bg-track">
+                      <span
+                        className={cn(
+                          "block h-full rounded-[4px] transition-[width,opacity] duration-[450ms] ease-out motion-reduce:transition-none",
+                          "bg-primary",
+                          faded && "opacity-30",
+                        )}
+                        style={{ width: `${widthFor(value)}%` }}
+                      />
+                    </span>
                   </li>
                 );
               })}
-            </ol>
+            </ul>
+            <div className="ml-[92px] flex justify-between pt-1 text-[11px] text-muted-foreground tabular-nums">
+              {ticks.map((tick) => (
+                <span key={tick}>{formatMetric(tick, metric)}</span>
+              ))}
+            </div>
           </div>
-        )}
-      </CardContent>
-    </Card>
+
+          <ol>
+            {sorted.map((row, index) => {
+              const config = CHANNELS[row.channel];
+              const isSelected = selected === row.channel;
+              return (
+                <li
+                  key={row.channel}
+                  className={cn(
+                    "flex h-11 items-center gap-3 rounded-xl px-2",
+                    isSelected && "bg-primary-soft",
+                  )}
+                >
+                  <span className="w-4 text-xs font-medium text-muted-foreground tabular-nums">{index + 1}</span>
+                  <span
+                    className={cn(
+                      "flex size-7 shrink-0 items-center justify-center rounded-lg text-[11px] font-bold",
+                      index === 0 ? "bg-primary text-primary-foreground" : "bg-primary-soft text-primary-strong",
+                    )}
+                  >
+                    {config?.initials}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-foreground">{config?.name ?? row.channel}</p>
+                    <p className="truncate text-xs text-muted-foreground tabular-nums">
+                      {formatCompactNumber(row.transactionCount)} txns, {formatEtb(row.totalValue)}
+                    </p>
+                  </div>
+                  <div className="text-right tabular-nums">
+                    <p className="text-sm font-bold text-foreground">{formatMetric(metricValue(row, metric), metric)}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {total ? ((row.transactionCount / total) * 100).toFixed(1) : "0.0"}% share
+                    </p>
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
+        </div>
+      )}
+    </SectionCard>
   );
 }

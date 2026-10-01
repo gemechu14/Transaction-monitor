@@ -4,13 +4,19 @@ import { getMe, login, logout } from "@/lib/api/auth";
 
 export const AUTH_ME_QUERY_KEY = ["auth", "me"] as const;
 
-/** Restores session state on app load. 401 means "not logged in", not an error to retry. */
+/**
+ * Restores session state on app load. 401 means "not logged in", not an error to retry.
+ * Polled and refetched on focus so a role change made by an admin elsewhere reaches this
+ * user without a fresh sign-in.
+ */
 export function useMe() {
   return useQuery({
     queryKey: AUTH_ME_QUERY_KEY,
     queryFn: getMe,
     retry: false,
-    staleTime: 5 * 60_000,
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: true,
   });
 }
 

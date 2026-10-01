@@ -20,7 +20,7 @@ export function Sidebar({
     <aside
       className={cn(
         "hidden shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-[width] duration-200 md:flex",
-        collapsed ? "w-[72px]" : "w-64",
+        collapsed ? "w-[76px]" : "w-60",
       )}
     >
       <div className={cn("flex h-16 items-center gap-2 px-4", collapsed && "justify-center px-0")}>
@@ -51,7 +51,7 @@ export function Sidebar({
           onClick={onToggleCollapse}
           aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
-          <PanelLeft className="size-4" />
+          <PanelLeft className={cn("size-4", collapsed && "-scale-x-100")} />
         </Button>
       </div>
 

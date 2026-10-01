@@ -184,3 +184,67 @@ export interface AnomalyParams extends DateRangeParams {
   severity?: AnomalySeverity;
   status?: AnomalyStatus;
 }
+
+/** One channel's headline figures for the Overview page's base period (a full month). */
+export interface OverviewChannelRow {
+  channel: ChannelId;
+  transactionCount: number;
+  totalValue: number;
+  /** Fraction 0-1, e.g. 0.962 for 96.2%. */
+  successRate: number;
+  avgLatencyMs: number;
+  /**
+   * Fractional change in value vs the month before, e.g. 0.042 for +4.2%.
+   * `null` when the previous month isn't known for this channel.
+   */
+  valueChangeVsPreviousMonth?: number | null;
+}
+
+/** All-platform transaction count for one day of the base period. */
+export interface OverviewDailyPoint {
+  date: string;
+  transactionCount: number;
+  /** All-platform base success rate for the day, fraction 0-1. */
+  successRate: number;
+}
+
+/** How the base period's transactions ended, as counts. */
+export interface OverviewStatusBreakdown {
+  success: number;
+  failed: number;
+  reversed: number;
+  pending: number;
+}
+
+export interface OverviewFailingChannel {
+  channel: ChannelId;
+  failedCount: number;
+  reversedCount: number;
+  /** Fraction 0-1. */
+  failureRate: number;
+}
+
+export interface OverviewAnomalyFlag {
+  channel: ChannelId;
+  /** Fractions 0-1: this period's failure rate and the previous period's baseline. */
+  failureRate: number;
+  baselineRate: number;
+}
+
+/**
+ * Everything the Overview page draws from. The platform and period filters are
+ * applied client-side (see `src/lib/overview.ts`), so a live WSO2 response only
+ * has to fill this shape.
+ */
+export interface OverviewDataset {
+  /** First and last day covered by `daily`, "YYYY-MM-DD". */
+  from: string;
+  to: string;
+  channels: OverviewChannelRow[];
+  daily: OverviewDailyPoint[];
+  status: OverviewStatusBreakdown;
+  failing: OverviewFailingChannel[];
+  anomalies: OverviewAnomalyFlag[];
+  /** All-platform change vs the month before, as fractions (0.03 for +3%). */
+  previousMonthChange: { value: number; transactions: number };
+}

@@ -48,6 +48,19 @@
   --color-status-pending-foreground: var(--status-pending-foreground);
   --color-status-reversed: var(--status-reversed);
   --color-status-reversed-foreground: var(--status-reversed-foreground);
+  --color-foreground-2: var(--foreground-2);
+  --color-line-soft: var(--line-soft);
+  --color-primary-strong: var(--primary-strong);
+  --color-primary-display: var(--primary-display);
+  --color-primary-soft: var(--primary-soft);
+  --color-orange: var(--orange);
+  --color-orange-strong: var(--orange-strong);
+  --color-orange-soft: var(--orange-soft);
+  --color-good: var(--good);
+  --color-bad: var(--bad);
+  --color-bad-soft: var(--bad-soft);
+  --color-track: var(--track);
+  --color-reversed: var(--reversed);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -58,32 +71,32 @@
 }
 
 :root {
-  /* White app background, near-navy body text */
-  --background: #ffffff;
-  --foreground: #101828;
+  /* Light-gray app background (white cards sit on it), near-navy body text */
+  --background: #fbfbfc;
+  --foreground: #14212b;
   --card: #ffffff;
-  --card-foreground: #101828;
+  --card-foreground: #14212b;
   --popover: #ffffff;
-  --popover-foreground: #101828;
+  --popover-foreground: #14212b;
 
   /* Brand accent (#00ADEF) with a dark-navy foreground for AA contrast */
   --primary: #00adef;
-  --primary-foreground: #04283f;
+  --primary-foreground: #03202e;
 
   --secondary: #eef2f6;
   --secondary-foreground: #1d2939;
-  --muted: #eef1f5;
-  --muted-foreground: #667085;
+  --muted: #f5f8fa;
+  --muted-foreground: #5a6b76;
 
   /* Light brand tint used for hover/active surfaces */
-  --accent: #e5f7fd;
-  --accent-foreground: #04283f;
+  --accent: #e4f6fd;
+  --accent-foreground: #03202e;
 
   --destructive: #d92d20;
   --destructive-foreground: #ffffff;
 
-  --border: #e4e7ec;
-  --input: #e4e7ec;
+  --border: #dde5ea;
+  --input: #dde5ea;
   --ring: #00adef;
 
   /* Chart series palette: brand, navy, green, amber, violet */
@@ -97,12 +110,12 @@
 
   /* Light sidebar with a brand-tinted active state */
   --sidebar: #ffffff;
-  --sidebar-foreground: #475467;
-  --sidebar-primary: #e5f7fd;
-  --sidebar-primary-foreground: #0387b8;
-  --sidebar-accent: #f3f4f6;
-  --sidebar-accent-foreground: #1d2939;
-  --sidebar-border: #e4e7ec;
+  --sidebar-foreground: #3a4a55;
+  --sidebar-primary: #e4f6fd;
+  --sidebar-primary-foreground: #0073a6;
+  --sidebar-accent: #f5f8fa;
+  --sidebar-accent-foreground: #14212b;
+  --sidebar-border: #dde5ea;
   --sidebar-ring: #00adef;
 
   /* Muted status colors for transaction states */
@@ -114,32 +127,47 @@
   --status-pending-foreground: #1d2939;
   --status-reversed: #7a5af8;
   --status-reversed-foreground: #ffffff;
+
+  /* Overview spec tokens: brand blue/orange tiers, outcome colours, chart tracks */
+  --foreground-2: #3a4a55;
+  --line-soft: #ecf1f4;
+  --primary-strong: #0073a6;
+  --primary-display: #0099d6;
+  --primary-soft: #e4f6fd;
+  --orange: #f8953f;
+  --orange-strong: #a8540f;
+  --orange-soft: #fef1e5;
+  --good: #0b7a5c;
+  --bad: #b4331f;
+  --bad-soft: #fbeae6;
+  --track: #eaf0f3;
+  --reversed: #94a3b8;
 }
 
 .dark {
-  --background: #0b1723;
-  --foreground: #e5e7eb;
-  --card: #101d2b;
-  --card-foreground: #e5e7eb;
-  --popover: #101d2b;
-  --popover-foreground: #e5e7eb;
+  --background: #151f32;
+  --foreground: #e8eef8;
+  --card: #0f172b;
+  --card-foreground: #e8eef8;
+  --popover: #0f172b;
+  --popover-foreground: #e8eef8;
 
   --primary: #00adef;
-  --primary-foreground: #04283f;
+  --primary-foreground: #03202e;
 
   --secondary: #1f2937;
   --secondary-foreground: #e5e7eb;
-  --muted: #1f2937;
-  --muted-foreground: #94a3b8;
+  --muted: #18233b;
+  --muted-foreground: #8b99b2;
 
-  --accent: #123549;
-  --accent-foreground: #e5e7eb;
+  --accent: #0b2a47;
+  --accent-foreground: #e8eef8;
 
   --destructive: #f04438;
   --destructive-foreground: #ffffff;
 
-  --border: rgba(255, 255, 255, 0.1);
-  --input: rgba(255, 255, 255, 0.15);
+  --border: #243149;
+  --input: #243149;
   --ring: #00adef;
 
   --chart-1: #00adef;
@@ -148,13 +176,13 @@
   --chart-4: #fdb022;
   --chart-5: #9b8afb;
 
-  --sidebar: #0b1723;
-  --sidebar-foreground: #cbd5e1;
-  --sidebar-primary: #17324a;
-  --sidebar-primary-foreground: #f8fafc;
-  --sidebar-accent: #101f30;
-  --sidebar-accent-foreground: #f1f5f9;
-  --sidebar-border: rgba(255, 255, 255, 0.08);
+  --sidebar: #151f32;
+  --sidebar-foreground: #b8c4d8;
+  --sidebar-primary: #0b2a47;
+  --sidebar-primary-foreground: #00adef;
+  --sidebar-accent: #18233b;
+  --sidebar-accent-foreground: #e8eef8;
+  --sidebar-border: #243149;
   --sidebar-ring: #00adef;
 
   --status-success: #17b26a;
@@ -165,6 +193,20 @@
   --status-pending-foreground: #1d2939;
   --status-reversed: #9b8afb;
   --status-reversed-foreground: #1d1533;
+
+  --foreground-2: #b8c4d8;
+  --line-soft: #1c2740;
+  --primary-strong: #00adef;
+  --primary-display: #00adef;
+  --primary-soft: #0b2a47;
+  --orange: #f8953f;
+  --orange-strong: #f8953f;
+  --orange-soft: #3a2618;
+  --good: #3ccb9a;
+  --bad: #ff8a73;
+  --bad-soft: #3a1d24;
+  --track: #1e2a43;
+  --reversed: #94a3b8;
 }
 
 @layer base {

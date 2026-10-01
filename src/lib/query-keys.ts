@@ -24,6 +24,7 @@ export const queryKeys = {
     ["reconciliation", params] as const,
   channelDailyFlow: (params: ChannelDailyFlowParams = {}) =>
     ["channel-daily-flow", params] as const,
+  overviewDataset: () => ["overview-dataset"] as const,
   periodSnapshot: (params: PeriodSnapshotParams = {}) =>
     ["period-snapshot", params] as const,
 };

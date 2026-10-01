@@ -1,7 +1,8 @@
 "use client";
 
+import { useEffect } from "react";
 // import { useState } from "react"; // only needed by the disabled sections below
-import { ShieldAlert } from "lucide-react";
+import { useRouter } from "next/navigation";
 // import {
 //   AlertTriangle,
 //   Mail,
@@ -14,7 +15,7 @@ import { ShieldAlert } from "lucide-react";
 
 import { UserManagementCard } from "@/components/settings/user-management-card";
 // import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+// import { Card, CardContent } from "@/components/ui/card"; // the disabled sections below use Card
 // import { CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 // import { Input } from "@/components/ui/input";
 // import { Separator } from "@/components/ui/separator";
@@ -56,8 +57,16 @@ import { useMe } from "@/hooks";
 // ];
 
 export default function SettingsPage() {
+  const router = useRouter();
   const meQuery = useMe();
   const isAdmin = meQuery.data?.user.role === "ADMIN";
+  const isNonAdmin = !!meQuery.data && !isAdmin;
+
+  // Settings is admin-only: a non-admin (including an admin demoted while on this page)
+  // is sent to Overview instead of being left on a dead end.
+  useEffect(() => {
+    if (isNonAdmin) router.replace("/overview");
+  }, [isNonAdmin, router]);
   // const user = meQuery.data?.user; // only used by the disabled "Signed in" card below
   // const [thresholds, setThresholds] = useState(DEFAULT_THRESHOLDS);
   // const [notify, setNotify] = useState<Record<NotifyKey, boolean>>({
@@ -74,18 +83,15 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-4">
-      <div className="sticky -top-4 z-20 -mx-4 -mt-2 flex flex-col gap-3 border-b border-border bg-background px-4 py-3 sm:-top-6 sm:-mx-6 sm:px-6 lg:flex-row lg:items-start lg:justify-between">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-base font-bold text-foreground sm:text-lg">Settings</h1>
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex min-w-0 flex-wrap items-center gap-2.5">
+          <h2 className="text-[22px] font-bold tracking-[-0.02em] text-foreground">Settings</h2>
+          {isAdmin && (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-primary-soft px-2.5 py-1 text-xs font-medium text-primary-strong">
               <span className="size-1.5 shrink-0 rounded-full bg-primary" />
               Admin
             </span>
-          </div>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Pre-approve sign-ins and manage who has access to the workspace.
-          </p>
+          )}
         </div>
 
         {/*
@@ -108,30 +114,14 @@ export default function SettingsPage() {
       )}
       */}
 
-      {meQuery.isLoading ? (
-        <Card>
-          <CardContent className="space-y-3 py-10">
-            <Skeleton className="h-5 w-48" />
-            <Skeleton className="h-40 w-full" />
-          </CardContent>
-        </Card>
-      ) : isAdmin ? (
+      {isAdmin ? (
         <UserManagementCard />
       ) : (
-        <Card className="border-dashed">
-          <CardContent className="flex flex-col items-center gap-3 py-16 text-center">
-            <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-muted">
-              <ShieldAlert className="size-6 text-muted-foreground" />
-            </span>
-            <div className="space-y-1">
-              <p className="text-sm font-semibold text-foreground">Admins only</p>
-              <p className="mx-auto max-w-sm text-sm text-muted-foreground">
-                This page is restricted to workspace admins. Contact an administrator if you believe you
-                should have access.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        <section className="space-y-4 rounded-2xl border border-border bg-card px-6 py-[22px]">
+          <Skeleton className="h-5 w-48" />
+          <Skeleton className="h-10 w-full rounded-[10px]" />
+          <Skeleton className="h-48 w-full" />
+        </section>
       )}
 
       {/*

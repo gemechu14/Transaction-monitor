@@ -24,7 +24,7 @@ export const NAV_ITEMS: NavItem[] = [
     title: "Overview",
     href: "/overview",
     icon: LayoutDashboard,
-    description: "Consolidated health of every channel routed throug the WSO2 API gateway",
+    description: "Health of every channel routed through the WSO2 API gateway",
   },
   {
     title: "Channels",
@@ -36,7 +36,7 @@ export const NAV_ITEMS: NavItem[] = [
     title: "Comparison",
     href: "/comparison",
     icon: GitCompareArrows,
-    description: "Compare a platform's own periods, or pit two platforms head-to-head.",
+    description: "Compare two channels, or one channel across two periods",
   },
   // {
   //   title: "Transactions",
@@ -66,7 +66,7 @@ export const NAV_ITEMS: NavItem[] = [
     title: "Settings",
     href: "/settings",
     icon: Settings,
-    description: "Alert thresholds, notification channels and workspace preferences.",
+    description: "Manage who can access the workspace and what they can do",
     adminOnly: true,
   },
 ];

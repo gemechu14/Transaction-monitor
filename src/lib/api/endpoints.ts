@@ -10,6 +10,7 @@ import {
   mockDelay,
   resolveMockRange,
 } from "@/lib/mock/overview-data";
+import { OVERVIEW_SAMPLE } from "@/lib/mock/overview-sample";
 import { queryMockTransactions } from "@/lib/mock/transactions-data";
 import type {
   Anomaly,
@@ -20,6 +21,7 @@ import type {
   ChannelSummaryParams,
   Kpi,
   KpiParams,
+  OverviewDataset,
   PaginatedResponse,
   PeakLoadParams,
   PeakLoadPoint,
@@ -127,4 +129,12 @@ export async function getPeriodSnapshot(
     return generateMockPeriodSnapshot(resolveMockRange(params));
   }
   return apiFetch<PeriodSnapshot>("/api/channels/period-snapshot", { params });
+}
+
+export async function getOverviewDataset(): Promise<OverviewDataset> {
+  if (USE_MOCK_DATA) {
+    await mockDelay();
+    return OVERVIEW_SAMPLE;
+  }
+  return apiFetch<OverviewDataset>("/api/overview");
 }
