@@ -104,7 +104,7 @@ export function OverviewReport({
         <BarChart
           points={view.series.map((d) => ({ label: formatShortDate(d.date), value: d.count }))}
           formatMax={(v) => formatCompactNumber(v)}
-          height={90}
+          height={70}
         />
       </Section>
 

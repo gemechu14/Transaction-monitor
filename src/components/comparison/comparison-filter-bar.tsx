@@ -17,7 +17,7 @@ export interface FieldOption {
 
 const TYPE_OPTIONS: { value: ComparisonType; label: string; icon: typeof ArrowLeftRight }[] = [
   { value: "channels", label: "Channel vs channel", icon: ArrowLeftRight },
-  { value: "periods", label: "Same channel", icon: Rows3 },
+  { value: "periods", label: "Period over period", icon: Rows3 },
 ];
 
 const INTERVAL_OPTIONS: { value: Interval; label: string }[] = [

@@ -12,14 +12,14 @@ export function BottomLinePanel({ line, isLoading }: { line: BottomLine | null; 
     <section className="rounded-2xl bg-primary-soft px-7 py-6 max-[620px]:px-5 max-[620px]:py-5" aria-live="polite">
       <p className="text-[13px] font-semibold text-primary-strong">Bottom line</p>
       {isLoading ? (
-        <Skeleton className="mt-2 h-9 w-2/3" />
+        <Skeleton className="mt-2 h-7 w-2/3" />
       ) : !line ? (
-        <p className="mt-1 text-[28px] leading-tight font-bold text-foreground max-[620px]:text-[22px]">
+        <p className="mt-1 text-xl leading-snug font-bold text-foreground max-[620px]:text-lg">
           Not enough data to compare amounts
         </p>
       ) : (
         <>
-          <p className="mt-1 text-[28px] leading-tight font-bold text-foreground max-[620px]:text-[22px]">
+          <p className="mt-1 text-xl leading-snug font-bold text-foreground max-[620px]:text-lg">
             {line.parts.map((part, index) => (
               <span key={index} className={cn(part.side && NAME_CLASS[part.side])}>
                 {part.text}

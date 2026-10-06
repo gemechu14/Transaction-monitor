@@ -27,7 +27,7 @@ export interface PeriodOption {
 export interface SideFigures {
   /** Panel name, e.g. "Telebirr" or "29 Sep". */
   name: string;
-  /** Small line under the name, e.g. "All platforms" on the Same channel tab. */
+  /** Small line under the name, e.g. "All platforms" on the Period over period tab. */
   caption?: string;
   /** `null` when the figure isn't available (e.g. August for some channels). */
   amount: number | null;

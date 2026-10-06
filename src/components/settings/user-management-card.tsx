@@ -50,7 +50,7 @@ const CONTROL =
   "h-10 rounded-[10px] border border-border bg-card text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground hover:border-foreground-2 focus-visible:border-primary focus-visible:ring-3 focus-visible:ring-primary/20";
 const BUTTON_BASE =
   "inline-flex h-10 items-center justify-center gap-1.5 rounded-[10px] px-4 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:pointer-events-none disabled:opacity-50";
-const PRIMARY_BUTTON = cn(BUTTON_BASE, "bg-primary font-bold text-primary-foreground hover:bg-primary/90");
+const PRIMARY_BUTTON = cn(BUTTON_BASE, "bg-primary font-bold text-white hover:bg-primary/90");
 const OUTLINE_BUTTON = cn(BUTTON_BASE, "border border-border bg-card text-foreground hover:bg-muted");
 const DANGER_BUTTON = cn(BUTTON_BASE, "bg-bad text-white hover:bg-bad/90");
 

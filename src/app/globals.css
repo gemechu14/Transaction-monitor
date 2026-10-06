@@ -209,6 +209,81 @@
   --reversed: #94a3b8;
 }
 
+/* Login page tokens (scoped so the dashboard palette is untouched) */
+.login-scope {
+  --l-bg: #eef2f7;
+  --l-surface: #ffffff;
+  --l-surface-2: #f4f7fb;
+  --l-line: #d9e1ec;
+  --l-line-soft: #e8eef5;
+  --l-text: #0f172b;
+  --l-text-2: #334155;
+  --l-muted: #5b6b82;
+  --l-primary: #00adef;
+  --l-primary-strong: #0073a6;
+  --l-primary-soft: #e0f3fc;
+  --l-primary-ink: #03202e;
+  --l-bad: #b4331f;
+  --l-bad-soft: #fbeae6;
+  --l-card-shadow: 0 1px 2px rgba(15, 23, 43, 0.05);
+}
+
+.dark .login-scope {
+  --l-bg: #151f32;
+  --l-surface: #0f172b;
+  --l-surface-2: #18233b;
+  --l-line: #243149;
+  --l-line-soft: #1c2740;
+  --l-text: #e8eef8;
+  --l-text-2: #b8c4d8;
+  --l-muted: #8b99b2;
+  --l-primary-strong: #00adef;
+  --l-primary-soft: #0b2a47;
+  --l-bad: #ff8a73;
+  --l-bad-soft: #3a1d24;
+  --l-card-shadow: none;
+}
+
+.login-input {
+  height: 46px;
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid var(--l-line);
+  background: var(--l-surface);
+  color: var(--l-text);
+  padding: 0 14px;
+  font-size: 15px;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.login-input::placeholder {
+  color: var(--l-muted);
+}
+.login-input:hover {
+  border-color: var(--l-text-2);
+}
+.login-input:focus,
+.login-input:focus-visible {
+  border-color: var(--l-primary);
+  box-shadow: 0 0 0 3px var(--l-primary-soft);
+}
+.login-input[aria-invalid="true"] {
+  border-color: var(--l-bad);
+}
+.login-input:-webkit-autofill,
+.login-input:-webkit-autofill:hover,
+.login-input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--l-text);
+  caret-color: var(--l-text);
+  box-shadow: 0 0 0 1000px var(--l-surface) inset;
+  transition: background-color 9999s ease-out 0s;
+}
+.login-input:-webkit-autofill:focus {
+  box-shadow:
+    0 0 0 1000px var(--l-surface) inset,
+    0 0 0 3px var(--l-primary-soft);
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

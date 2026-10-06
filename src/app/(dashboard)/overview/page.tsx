@@ -10,6 +10,8 @@ import { DistributionByChannelCard } from "@/components/overview/distribution-ca
 import { LatencyCard } from "@/components/overview/latency-card";
 import { OverviewKpiGrid } from "@/components/overview/overview-kpi-grid";
 import { PeriodPicker } from "@/components/overview/period-picker";
+// PDF export is disabled for now; restore with the button below.
+// import { ExportPdfButton, reportAuthor, reportLogoSrc } from "@/components/reports/export-pdf-button";
 import { StatusDistributionCard } from "@/components/overview/status-distribution-card";
 import { TopFailingChannelsCard } from "@/components/overview/top-failing-channels-card";
 import {
@@ -101,6 +103,29 @@ export default function OverviewPage() {
             </SelectContent>
           </Select>
           <PeriodPicker value={period} onChange={setPeriod} dataFrom={dataset?.from} />
+          {/* <ExportPdfButton
+            disabled={isLoading || !view || !dataset}
+            fileName={`overview-report_${period.range.from}_${period.range.to}.pdf`}
+            build={async () => {
+              const { OverviewReport } = await import("@/components/reports/overview-report");
+              return (
+                <OverviewReport
+                  meta={{
+                    periodLabel: formatRangeLabel(period.range),
+                    generatedBy: reportAuthor(meQuery.data?.user),
+                    generatedAt: new Date(),
+                    logoSrc: reportLogoSrc(),
+                  }}
+                  dataset={dataset!}
+                  view={view!}
+                  kpis={kpis}
+                  channel={channel}
+                  platformLabel={platformLabel}
+                  isAdmin={isAdmin}
+                />
+              );
+            }}
+          /> */}
         </div>
       </div>
 

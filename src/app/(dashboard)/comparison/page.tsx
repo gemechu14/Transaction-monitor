@@ -55,7 +55,7 @@ export default function ComparisonPage() {
   const [channels, setChannels] = useState<{ a: ChannelId; b: ChannelId }>({ a: "telebirr", b: "mbesa_p2p" });
   const [period, setPeriod] = useState<OverviewPeriod>(DEFAULT_PERIOD);
 
-  // Same channel
+  // Period over period
   const [sameChannel, setSameChannel] = useState<ChannelId | "all">("all");
   const [interval, setIntervalKind] = useState<Interval>("day");
   // `null` means "this interval's defaults", so they can be worked out once the data has loaded.
@@ -106,7 +106,7 @@ export default function ComparisonPage() {
           <h2 className="text-[22px] font-bold tracking-[-0.02em] text-foreground">Transaction comparison</h2>
           <span className="inline-flex items-center gap-1.5 rounded-full bg-primary-soft px-2.5 py-1 text-xs font-medium text-primary-strong">
             <span className="size-1.5 shrink-0 rounded-full bg-primary" />
-            {type === "channels" ? "Channel vs channel" : "Same channel"}
+            {type === "channels" ? "Channel vs channel" : "Period over period"}
           </span>
         </div>
         <ComparisonTypeToggle type={type} onTypeChange={setType} />

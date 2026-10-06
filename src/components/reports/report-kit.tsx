@@ -59,7 +59,7 @@ const styles = StyleSheet.create({
   headerMetaLabel: { fontSize: 7, color: "#B9D3E3", textTransform: "uppercase", letterSpacing: 0.8 },
   headerMetaValue: { fontSize: 9, color: "#FFFFFF", marginTop: 2, marginBottom: 5 },
   body: { paddingHorizontal: 36 },
-  titleBlock: { marginBottom: 16 },
+  titleBlock: { marginBottom: 6 },
   eyebrow: {
     fontSize: 8,
     color: PDF_COLORS.brandStrong,
@@ -335,7 +335,7 @@ export function Table<Row>({
 export function BarChart({
   points,
   formatMax,
-  height = 120,
+  height = 100,
 }: {
   points: { label: string; value: number }[];
   formatMax: (value: number) => string;
@@ -377,15 +377,26 @@ export function BarChart({
           ))}
         </View>
       </View>
-      <View style={{ flexDirection: "row", marginLeft: 44, marginTop: 3 }}>
-        {points.map((point, index) => (
-          <Text
-            key={index}
-            style={{ flex: 1, fontSize: 6, color: PDF_COLORS.faint, textAlign: "center" }}
-          >
-            {index % labelEvery === 0 ? point.label : ""}
-          </Text>
-        ))}
+      {/* Labels are positioned over their bar's centre so they can be wider than the bar. */}
+      <View style={{ marginLeft: 44, marginTop: 3, height: 9, position: "relative" }}>
+        {points.map((point, index) =>
+          index % labelEvery === 0 ? (
+            <Text
+              key={index}
+              style={{
+                position: "absolute",
+                left: `${((index + 0.5) / points.length) * 100}%`,
+                width: 40,
+                marginLeft: -20,
+                fontSize: 6,
+                color: PDF_COLORS.faint,
+                textAlign: "center",
+              }}
+            >
+              {point.label}
+            </Text>
+          ) : null,
+        )}
       </View>
     </View>
   );
