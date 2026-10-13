@@ -67,9 +67,12 @@ function SidePanel({ side, figures, leads }: { side: SideKey; figures: SideFigur
           <p className="flex items-center gap-2 text-[17px] font-bold text-foreground">
             <span className={cn("size-2.5 shrink-0 rounded-full", SIDE_DOT_CLASS[side])} aria-hidden />
             <span className="truncate">{figures.name}</span>
+            {/* Inline so Period over period panels keep the same layout as Channel vs channel. */}
+            {figures.caption && (
+              <span className="truncate text-xs font-normal text-muted-foreground">· {figures.caption}</span>
+            )}
             <span className="sr-only">(side {side.toUpperCase()})</span>
           </p>
-          {figures.caption && <p className="mt-0.5 pl-[18px] text-xs text-muted-foreground">{figures.caption}</p>}
         </div>
         {leads && (
           <span className={cn("rounded-full px-2.5 py-1 text-xs font-semibold", SIDE_STYLES[side].tag)}>

@@ -1,28 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { CalendarDays, Check, ChevronLeft, ChevronRight } from "lucide-react";
+import { CalendarDays, Check } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { addDays, formatDateRangeLabel, getLastNDays, toISODate, type DateRange } from "@/lib/date";
+import { formatDateRangeLabel, getLastNDays, type DateRange } from "@/lib/date";
 import { cn } from "@/lib/utils";
-
-const WEEKDAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
-const MONTH_NAMES = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
-];
 
 const PERIOD_PRESETS: { label: string; days: number }[] = [
   { label: "Today", days: 1 },
@@ -34,14 +18,6 @@ const PERIOD_PRESETS: { label: string; days: number }[] = [
   { label: "Yearly", days: 365 },
 ];
 
-function buildMonthGrid(viewDate: Date): Date[] {
-  const year = viewDate.getFullYear();
-  const month = viewDate.getMonth();
-  const first = new Date(year, month, 1);
-  const gridStart = addDays(first, -first.getDay());
-  return Array.from({ length: 42 }, (_, i) => addDays(gridStart, i));
-}
-
 export function DateRangePicker({
   range,
   onRangeChange,
@@ -50,17 +26,13 @@ export function DateRangePicker({
   onRangeChange: (range: DateRange) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [viewDate, setViewDate] = useState(() => new Date(range.to));
   const [draftFrom, setDraftFrom] = useState(range.from);
   const [draftTo, setDraftTo] = useState(range.to);
-  const [pendingStart, setPendingStart] = useState<string | null>(null);
 
   function handleOpenChange(next: boolean) {
     if (next) {
       setDraftFrom(range.from);
       setDraftTo(range.to);
-      setPendingStart(null);
-      setViewDate(new Date(range.to));
     }
     setOpen(next);
   }
@@ -80,30 +52,14 @@ export function DateRangePicker({
     setOpen(false);
   }
 
-  function handleDayClick(iso: string) {
-    if (!pendingStart) {
-      setPendingStart(iso);
-      setDraftFrom(iso);
-      setDraftTo(iso);
-      return;
-    }
-    if (iso < pendingStart) {
-      setDraftFrom(iso);
-      setDraftTo(pendingStart);
-    } else {
-      setDraftFrom(pendingStart);
-      setDraftTo(iso);
-    }
-    setPendingStart(null);
-  }
+  const reversed = !!draftFrom && !!draftTo && draftTo < draftFrom;
+  const canApply = !!draftFrom && !!draftTo && !reversed;
 
   function applyCustomRange() {
+    if (!canApply) return;
     onRangeChange({ from: draftFrom, to: draftTo });
     setOpen(false);
   }
-
-  const grid = buildMonthGrid(viewDate);
-  const currentMonth = viewDate.getMonth();
 
   return (
     <Popover open={open} onOpenChange={handleOpenChange}>
@@ -139,76 +95,33 @@ export function DateRangePicker({
           ))}
         </div>
 
-        <div className="w-full shrink-0 p-3 sm:w-72">
+        <div className="w-full shrink-0 p-3 sm:w-56">
           <p className="px-1 pb-2 text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
             Custom range
           </p>
-          <div className="mb-2 flex items-center justify-between px-1">
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              onClick={() => setViewDate(addDays(new Date(viewDate.getFullYear(), viewDate.getMonth(), 1), -1))}
-              aria-label="Previous month"
-            >
-              <ChevronLeft className="size-4" />
-            </Button>
-            <p className="text-sm font-medium text-foreground">
-              {MONTH_NAMES[viewDate.getMonth()]} {viewDate.getFullYear()}
-            </p>
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              onClick={() => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 1))}
-              aria-label="Next month"
-            >
-              <ChevronRight className="size-4" />
-            </Button>
-          </div>
-
-          <div className="grid grid-cols-7 gap-y-0.5">
-            {WEEKDAYS.map((day) => (
-              <div
-                key={day}
-                className="flex h-7 items-center justify-center text-[11px] font-medium text-muted-foreground"
-              >
-                {day}
-              </div>
+          <div className="space-y-2 px-1">
+            {[
+              { label: "Start date", value: draftFrom, onChange: setDraftFrom, min: undefined, max: draftTo || undefined },
+              { label: "End date", value: draftTo, onChange: setDraftTo, min: draftFrom || undefined, max: undefined },
+            ].map((field) => (
+              <label key={field.label} className="block">
+                <span className="mb-1 block text-xs text-muted-foreground">{field.label}</span>
+                <input
+                  type="date"
+                  value={field.value}
+                  min={field.min}
+                  max={field.max}
+                  onChange={(e) => field.onChange(e.target.value)}
+                  className="h-8 w-full rounded-md border border-border bg-background px-2 text-xs text-foreground tabular-nums focus-visible:border-primary focus-visible:outline-2 focus-visible:outline-primary"
+                />
+              </label>
             ))}
-            {grid.map((date) => {
-              const iso = toISODate(date);
-              const inCurrentMonth = date.getMonth() === currentMonth;
-              const isStart = iso === draftFrom;
-              const isEnd = iso === draftTo;
-              const inRange = iso >= draftFrom && iso <= draftTo;
-
-              return (
-                <button
-                  key={iso}
-                  type="button"
-                  onClick={() => handleDayClick(iso)}
-                  className={cn(
-                    "relative h-7 text-xs",
-                    inRange && "bg-primary/10",
-                    isStart && "rounded-l-md",
-                    isEnd && "rounded-r-md",
-                  )}
-                >
-                  <span
-                    className={cn(
-                      "flex size-7 items-center justify-center rounded-full",
-                      !inCurrentMonth && "text-muted-foreground/40",
-                      (isStart || isEnd) && "bg-primary font-medium text-primary-foreground",
-                      !isStart && !isEnd && inRange && "font-medium text-primary",
-                    )}
-                  >
-                    {date.getDate()}
-                  </span>
-                </button>
-              );
-            })}
+            {reversed && (
+              <p className="text-[11px] text-destructive">End date must be on or after the start date</p>
+            )}
           </div>
 
-          <Button className="mt-3 w-full" size="sm" onClick={applyCustomRange}>
+          <Button className="mt-3 w-full" size="sm" onClick={applyCustomRange} disabled={!canApply}>
             Apply custom range
           </Button>
         </div>

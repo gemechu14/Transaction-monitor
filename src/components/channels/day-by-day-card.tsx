@@ -1,15 +1,18 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ArrowDown, ArrowUp, CalendarDays, ChartColumn, ChevronsUpDown, Download, Table } from "lucide-react";
+import { ArrowDown, ArrowUp, CalendarDays, ChartColumn, ChevronsUpDown, Table } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
 import { SectionCard } from "@/components/overview/section-card";
+import { ExportMenu } from "@/components/reports/export-menu";
+import { buildDayByDayReport } from "@/components/reports/report-builders";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import type { ChannelId } from "@/config/channels";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import {
-  LOW_SUCCESS_RATE,
+  // LOW_SUCCESS_RATE, // used by the Success column, hidden for now
   availableGranularities,
   formatEtb2,
   groupDays,
@@ -18,6 +21,7 @@ import {
   type PeriodRow,
 } from "@/lib/channels";
 import { formatCompactNumber } from "@/lib/format";
+import type { DateRange } from "@/lib/date";
 import { formatEtb, formatShortDate, niceAxisMax } from "@/lib/overview";
 import { cn } from "@/lib/utils";
 
@@ -35,11 +39,12 @@ const GRANULARITY: Record<Granularity, { label: string; title: string; word: str
 
 const COLUMNS: { key: SortKey; label: string; align?: "right" }[] = [
   { key: "start", label: "Day" },
-  { key: "count", label: "Transactions" },
-  { key: "value", label: "Value", align: "right" },
-  { key: "avgTicket", label: "Avg ticket", align: "right" },
-  { key: "failed", label: "Failed / reversed", align: "right" },
-  { key: "successRate", label: "Success", align: "right" },
+  { key: "count", label: "Transactions", align: "right" },
+  { key: "value", label: "Value (ETB)", align: "right" },
+  { key: "avgTicket", label: "Avg ticket (ETB)", align: "right" },
+  // Hidden for now; restore with the matching cells in DayTable.
+  // { key: "failed", label: "Failed / reversed", align: "right" },
+  // { key: "successRate", label: "Success", align: "right" },
 ];
 
 const TRIGGER_CLASS = "h-9 rounded-[10px] bg-card px-3 text-[13px] font-medium";
@@ -51,44 +56,20 @@ function sortRows(rows: PeriodRow[], key: SortKey, dir: SortDir): PeriodRow[] {
   return dir === "asc" ? sorted : sorted.reverse();
 }
 
-function downloadCsv(rows: PeriodRow[], granularity: Granularity) {
-  const isDay = granularity === "day";
-  const header = [
-    ...(isDay ? ["Date", "Day"] : ["Start date", "End date", "Days"]),
-    "Transactions",
-    "Value (ETB)",
-    "Avg ticket (ETB)",
-    "Failed",
-    "Success rate (%)",
-  ];
-  const lines = rows.map((r) =>
-    [
-      ...(isDay ? [r.start, r.sublabel.split(",")[0]] : [r.start, r.end, r.days]),
-      Math.round(r.count),
-      r.value.toFixed(2),
-      r.avgTicket.toFixed(2),
-      Math.round(r.failed),
-      (r.successRate * 100).toFixed(2),
-    ].join(","),
-  );
-  const blob = new Blob([[header.join(","), ...lines].join("\n")], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `${GRANULARITY[granularity].file}-transactions.csv`;
-  link.click();
-  URL.revokeObjectURL(url);
-}
-
 export function DayByDayCard({
   rows,
+  channel,
   platformLabel,
+  range,
   periodDays,
   note,
   isLoading,
 }: {
   rows: DayRow[];
+  channel: ChannelId | "all";
   platformLabel: string;
+  /** Selected period, for the exported report. */
+  range: DateRange;
   /** Length of the selected period; decides whether week and month grouping are offered. */
   periodDays: number;
   /** Appended to the subtitle, e.g. when the period starts before the data does. */
@@ -156,15 +137,16 @@ export function DayByDayCard({
               ))}
             </SelectContent>
           </Select>
-          <button
-            type="button"
-            onClick={() => downloadCsv(sorted, active)}
-            disabled={!rows.length}
-            className="inline-flex h-9 items-center gap-1.5 rounded-[10px] border border-border px-3 text-[13px] font-medium text-foreground transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:outline-primary disabled:opacity-50"
-          >
-            <Download className="size-4 text-muted-foreground" aria-hidden />
-            CSV
-          </button>
+          <ExportMenu
+            size="sm"
+            disabled={isLoading || !rows.length}
+            getReport={(author) =>
+              buildDayByDayReport(
+                { rows: sorted, granularity: active, title: meta.title, channel, platformLabel, range },
+                author,
+              )
+            }
+          />
         </>
       }
     >
@@ -200,10 +182,20 @@ function DayTable({
   sort: { key: SortKey; dir: SortDir };
   onSort: (key: SortKey) => void;
 }) {
+  const totals = rows.reduce((acc, r) => ({ count: acc.count + r.count, value: acc.value + r.value }), {
+    count: 0,
+    value: 0,
+  });
   return (
     <div className="relative max-h-[560px] overflow-auto rounded-xl border border-line-soft">
-      <table className="w-full border-collapse text-sm tabular-nums max-[900px]:min-w-[760px]">
-        <thead className="sticky top-0 z-10 bg-card shadow-[inset_0_-1px_0_var(--border)]">
+      <table className="w-full border-collapse font-sans text-sm tabular-nums max-[640px]:min-w-[560px]">
+        <colgroup>
+          <col className="w-[31%]" />
+          <col className="w-[23%]" />
+          <col className="w-[23%]" />
+          <col className="w-[23%]" />
+        </colgroup>
+        <thead className="sticky top-0 z-10 bg-muted shadow-[inset_0_-1px_0_var(--border)]">
           <tr>
             {COLUMNS.map((col) => {
               const active = sort.key === col.key;
@@ -213,18 +205,19 @@ function DayTable({
                   key={col.key}
                   scope="col"
                   aria-sort={active ? (sort.dir === "asc" ? "ascending" : "descending") : "none"}
-                  className={cn("h-11 px-4 font-normal", col.align === "right" ? "text-right" : "text-left")}
+                  className={cn("h-10 px-5 font-normal", col.align === "right" ? "text-right" : "text-left")}
                 >
                   <button
                     type="button"
                     onClick={() => onSort(col.key)}
                     className={cn(
-                      "inline-flex items-center gap-1 rounded text-xs font-semibold transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-primary",
+                      "inline-flex items-center gap-1 rounded text-[11px] font-semibold tracking-[0.04em] uppercase transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-primary",
+                      col.align === "right" && "flex-row-reverse",
                       active ? "text-foreground" : "text-muted-foreground",
                     )}
                   >
                     {col.key === "start" ? heading : col.label}
-                    <Icon className={cn("size-3.5", !active && "opacity-50")} aria-hidden />
+                    <Icon className={cn("size-3.5", !active && "opacity-40")} aria-hidden />
                   </button>
                 </th>
               );
@@ -232,41 +225,46 @@ function DayTable({
           </tr>
         </thead>
         <tbody>
-          {rows.map((row) => {
-            const low = row.successRate < LOW_SUCCESS_RATE;
-            return (
-              <tr
-                key={row.start}
-                className="h-[52px] border-b border-line-soft transition-colors last:border-b-0 hover:bg-muted/70"
-              >
-                <td className="px-4 whitespace-nowrap">
-                  <p className="font-semibold text-foreground">{row.label}</p>
-                  <p className={cn("text-xs", row.weekend ? "font-medium text-orange-strong" : "text-muted-foreground")}>
-                    {row.sublabel}
-                  </p>
-                </td>
-                <td className="px-4 font-semibold text-foreground">{formatCompactNumber(row.count)}</td>
-                <td className="px-4 text-right font-medium whitespace-nowrap text-foreground">
-                  {formatEtb2(row.value)}
-                </td>
-                <td className="px-4 text-right whitespace-nowrap text-muted-foreground">{formatEtb(row.avgTicket)}</td>
-                <td className="px-4 text-right text-foreground">{Math.round(row.failed).toLocaleString("en-US")}</td>
-                <td className="px-4 text-right">
-                  <span
-                    className={cn(
-                      "inline-flex h-6 items-center gap-1 rounded-full px-2.5 text-xs font-semibold",
-                      low ? "bg-orange-soft text-orange-strong" : "bg-primary-soft text-primary-strong",
-                    )}
-                  >
-                    {low && <ArrowDown className="size-3" aria-hidden />}
-                    {(row.successRate * 100).toFixed(1)}%
-                    {low && <span className="sr-only"> (below {(LOW_SUCCESS_RATE * 100).toFixed(1)}%)</span>}
-                  </span>
-                </td>
-              </tr>
-            );
-          })}
+          {rows.map((row) => (
+            <tr
+              key={row.start}
+              className="h-[52px] border-b border-line-soft transition-colors last:border-b-0 even:bg-muted/40 hover:bg-primary-soft/50"
+            >
+              <td className="px-5 whitespace-nowrap">
+                <p className="font-medium text-foreground">{row.label}</p>
+                <p className={cn("text-xs", row.weekend ? "font-medium text-orange-strong" : "text-muted-foreground")}>
+                  {row.sublabel}
+                </p>
+              </td>
+              <td className="px-5 text-right font-medium text-foreground">
+                {Math.round(row.count).toLocaleString("en-US")}
+              </td>
+              <td className="px-5 text-right font-semibold whitespace-nowrap text-foreground">
+                {formatEtb2(row.value)}
+              </td>
+              <td className="px-5 text-right whitespace-nowrap text-muted-foreground">{formatEtb(row.avgTicket)}</td>
+              {/* Failed / reversed and Success are hidden for now.
+              <td className="px-5 text-right text-foreground">{Math.round(row.failed).toLocaleString("en-US")}</td>
+              <td className="px-5 text-right">{(row.successRate * 100).toFixed(1)}%</td> */}
+            </tr>
+          ))}
         </tbody>
+        <tfoot className="sticky bottom-0 z-10 bg-card shadow-[inset_0_1px_0_var(--border)]">
+          <tr className="h-12 font-semibold text-foreground">
+            <td className="px-5">
+              Total{" "}
+              <span className="text-xs font-normal text-muted-foreground">
+                · {rows.length} {heading.toLowerCase()}
+                {rows.length === 1 ? "" : "s"}
+              </span>
+            </td>
+            <td className="px-5 text-right">{Math.round(totals.count).toLocaleString("en-US")}</td>
+            <td className="px-5 text-right whitespace-nowrap">{formatEtb2(totals.value)}</td>
+            <td className="px-5 text-right whitespace-nowrap text-muted-foreground">
+              {formatEtb(totals.count ? totals.value / totals.count : 0)}
+            </td>
+          </tr>
+        </tfoot>
       </table>
     </div>
   );
@@ -361,8 +359,8 @@ function DayTooltip({ active, payload }: { active?: boolean; payload?: ReadonlyA
   const row = payload[0].payload as ChartRow;
   return (
     <div className="rounded-lg bg-[#14212b] px-3 py-2 text-xs text-white shadow-lg tabular-nums">
-      {row.tooltip}: {Math.round(row.count).toLocaleString("en-US")} transactions,{" "}
-      {(row.successRate * 100).toFixed(1)}% success
+      {row.tooltip}: {Math.round(row.count).toLocaleString("en-US")} transactions
+      {/* Success is hidden for now: , {(row.successRate * 100).toFixed(1)}% success */}
     </div>
   );
 }

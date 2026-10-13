@@ -11,6 +11,9 @@ import {
 } from "@/components/channels/channel-cards";
 import { DayByDayCard } from "@/components/channels/day-by-day-card";
 import { PeriodPicker } from "@/components/overview/period-picker";
+// Export is disabled for now; restore these imports with the menu below.
+// import { ExportMenu } from "@/components/reports/export-menu";
+// import { buildChannelsReport } from "@/components/reports/report-builders";
 import {
   Select,
   SelectContent,
@@ -91,7 +94,7 @@ export default function ChannelsPage() {
             value={channel}
             onValueChange={(value) => setChannel(value as ChannelId | "all")}
           >
-            <SelectTrigger aria-label="Platform" className="h-11 w-48 rounded-[10px] bg-card px-3.5">
+            <SelectTrigger aria-label="Platform" className="w-48 rounded-[10px] bg-card px-3.5 data-[size=default]:h-10">
               <Layers className="size-4 text-primary-strong" />
               <SelectValue />
             </SelectTrigger>
@@ -106,7 +109,7 @@ export default function ChannelsPage() {
           </Select>
           {channel === "all" && (
             <Select items={rankItems} value={rankBy} onValueChange={(value) => setRankChoice(value as RankMetric)}>
-              <SelectTrigger aria-label="Rank channels by" className="h-11 w-56 rounded-[10px] bg-card px-3.5">
+              <SelectTrigger aria-label="Rank channels by" className="w-[204px] gap-1.5 rounded-[10px] bg-card px-3 data-[size=default]:h-10">
                 <ArrowDownWideNarrow className="size-4 text-primary-strong" />
                 <SelectValue />
               </SelectTrigger>
@@ -119,7 +122,18 @@ export default function ChannelsPage() {
               </SelectContent>
             </Select>
           )}
-          <PeriodPicker value={period} onChange={setPeriod} dataFrom={dataset?.from} />
+          <PeriodPicker value={period} onChange={setPeriod} dataFrom={dataset?.from} size="sm" />
+          {/* <ExportMenu
+            disabled={isLoading || !view}
+            getReport={(author) =>
+              dataset && view
+                ? buildChannelsReport(
+                    { dataset, view, channel, rankBy, platformLabel, range: period.range },
+                    author,
+                  )
+                : undefined
+            }
+          /> */}
         </div>
       </div>
 
@@ -136,7 +150,9 @@ export default function ChannelsPage() {
 
       <DayByDayCard
         rows={view?.days ?? []}
+        channel={channel}
         platformLabel={platformLabel}
+        range={period.range}
         periodDays={countDays(period.range)}
         note={dataNote}
         isLoading={isLoading}

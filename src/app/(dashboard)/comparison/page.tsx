@@ -15,6 +15,8 @@ import {
 import { HeadToHeadCard } from "@/components/comparison/head-to-head-card";
 import { KeyInsightsCard } from "@/components/comparison/key-insights-card";
 import { ShareOfAmountCard } from "@/components/comparison/share-of-amount-card";
+import { ExportMenu } from "@/components/reports/export-menu";
+import { buildComparisonReport, type ComparisonExportInput } from "@/components/reports/report-builders";
 import { CHANNEL_LIST, type ChannelId } from "@/config/channels";
 import { useOverviewDataset } from "@/hooks";
 import {
@@ -82,6 +84,7 @@ export default function ComparisonPage() {
         b,
         insights: channelInsights(a, b, totals, periodDays),
         line: bottomLine(a, b, { periodLabel: formatRangeLabel(period.range) }),
+        exportInput: { type: "channels", channels, range: period.range } satisfies ComparisonExportInput,
       };
     }
 
@@ -96,6 +99,11 @@ export default function ComparisonPage() {
       b,
       insights: periodInsights(a, b),
       line: bottomLine(a, b, { prefix: caption }),
+      exportInput: {
+        type: "periods",
+        channel: sameChannel,
+        periods: { a: optionA, b: optionB },
+      } satisfies ComparisonExportInput,
     };
   }, [dataset, type, channels, period.range, periodOptions, selectedPeriods.a, selectedPeriods.b, sameChannel]);
 
@@ -171,6 +179,14 @@ export default function ComparisonPage() {
             />
           </>
         )}
+        <div className="ml-auto self-start max-[760px]:order-first max-[760px]:ml-0 max-[760px]:self-end">
+          <ExportMenu
+            disabled={isLoading || !result}
+            getReport={(author) =>
+              result ? buildComparisonReport({ ...result, ...result.exportInput }, author) : undefined
+            }
+          />
+        </div>
       </ComparisonFilterBar>
 
       <HeadToHeadCard a={result?.a ?? EMPTY_SIDE} b={result?.b ?? EMPTY_SIDE} isLoading={isLoading} />

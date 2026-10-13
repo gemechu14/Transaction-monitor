@@ -10,8 +10,8 @@ import { DistributionByChannelCard } from "@/components/overview/distribution-ca
 import { LatencyCard } from "@/components/overview/latency-card";
 import { OverviewKpiGrid } from "@/components/overview/overview-kpi-grid";
 import { PeriodPicker } from "@/components/overview/period-picker";
-// PDF export is disabled for now; restore with the button below.
-// import { ExportPdfButton, reportAuthor, reportLogoSrc } from "@/components/reports/export-pdf-button";
+import { ExportMenu } from "@/components/reports/export-menu";
+import { buildOverviewReport } from "@/components/reports/report-builders";
 import { StatusDistributionCard } from "@/components/overview/status-distribution-card";
 import { TopFailingChannelsCard } from "@/components/overview/top-failing-channels-card";
 import {
@@ -89,7 +89,7 @@ export default function OverviewPage() {
             value={channel}
             onValueChange={(value) => setChannel(value as ChannelId | "all")}
           >
-            <SelectTrigger aria-label="Platform" className="h-11 w-48 rounded-[10px] bg-card px-3.5 data-[size=default]:h-11">
+            <SelectTrigger aria-label="Platform" className="w-48 rounded-[10px] bg-card px-3.5 data-[size=default]:h-10">
               <Layers className="size-4 text-primary-strong" />
               <SelectValue />
             </SelectTrigger>
@@ -102,30 +102,18 @@ export default function OverviewPage() {
               ))}
             </SelectContent>
           </Select>
-          <PeriodPicker value={period} onChange={setPeriod} dataFrom={dataset?.from} />
-          {/* <ExportPdfButton
-            disabled={isLoading || !view || !dataset}
-            fileName={`overview-report_${period.range.from}_${period.range.to}.pdf`}
-            build={async () => {
-              const { OverviewReport } = await import("@/components/reports/overview-report");
-              return (
-                <OverviewReport
-                  meta={{
-                    periodLabel: formatRangeLabel(period.range),
-                    generatedBy: reportAuthor(meQuery.data?.user),
-                    generatedAt: new Date(),
-                    logoSrc: reportLogoSrc(),
-                  }}
-                  dataset={dataset!}
-                  view={view!}
-                  kpis={kpis}
-                  channel={channel}
-                  platformLabel={platformLabel}
-                  isAdmin={isAdmin}
-                />
-              );
-            }}
-          /> */}
+          <PeriodPicker value={period} onChange={setPeriod} dataFrom={dataset?.from} size="sm" />
+          <ExportMenu
+            disabled={isLoading || !view}
+            getReport={(author) =>
+              dataset && view
+                ? buildOverviewReport(
+                    { dataset, view, kpis, channel, platformLabel, range: period.range, isAdmin },
+                    author,
+                  )
+                : undefined
+            }
+          />
         </div>
       </div>
 

@@ -1,0 +1,435 @@
+[browser] Encountered a script tag while rendering React component. Scripts inside React components are never executed when rendering on the client. Consider using template tag instead (https://developer.mozilla.org/en-US/docs/Web/HTML/Element/template). 
+[browser] Uncaught Error: Hydration failed because the server rendered HTML didn't match the client. As a result this tree will be regenerated on the client. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+https://react.dev/link/hydration-mismatch
+
+  ...
+    <HotReload globalError={[...]} webSocket={WebSocket} staticIndicatorState={{pathname:null, ...}}>
+      <AppDevOverlayErrorBoundary globalError={[...]}>
+        <ReplaySsrOnlyErrors>
+        <DevRootHTTPAccessFallbackBoundary>
+          <HTTPAccessFallbackBoundary notFound={<NotAllowedRootHTTPFallbackError>}>
+            <HTTPAccessFallbackErrorBoundary pathname="/login" notFound={<NotAllowedRootHTTPFallbackError>} ...>
+              <RedirectBoundary>
+                <RedirectErrorBoundary router={{...}}>
+                  <Head>
+                  <__next_root_layout_boundary__>
+                    <SegmentViewNode type="layout" pagePath="layout.tsx">
+                      <SegmentTrieNode>
+                      <link>
+                      <script>
+                      <script>
+                      <script>
+                      <RootLayout>
+                        <html lang="en" suppressHydrationWarning={true} className="geist_a715...">
+                          <body
+                            className="min-h-full flex flex-col bg-background text-foreground"
+-                           data-new-gr-c-s-check-loaded="14.1336.0"
+-                           data-gr-ext-installed=""
+                          >
+                            ...
+                              <form onSubmit={function handleSubmit} className="space-y-[1..." noValidate={true}>
+                                <div>
+                                <div>
+                                  <label>
+                                  <div className="relative">
+                                    <input>
+                                    <button
+                                      type="button"
+                                      onClick={function onClick}
++                                     className="absolute top-1/2 right-[5px] flex size-9 -translate-y-1/2 items-cente..."
+-                                     className="ext-btn ext-copypw copyPwJs"
++                                     aria-label="Show password"
+-                                     aria-label={null}
++                                     aria-pressed={false}
+-                                     aria-pressed={null}
+-                                     title="Copy"
+                                    >
+                                      <Eye className="size-[18px]">
++                                       <svg
++                                         ref={null}
++                                         xmlns="http://www.w3.org/2000/svg"
++                                         width={24}
++                                         height={24}
++                                         viewBox="0 0 24 24"
++                                         fill="none"
++                                         stroke="currentColor"
++                                         strokeWidth={2}
++                                         strokeLinecap="round"
++                                         strokeLinejoin="round"
++                                         className="lucide lucide-eye size-[18px]"
++                                         aria-hidden="true"
++                                       >
+-                                       <img
+-                                         src="chrome-extension://3f4650da-4228-4f59-bdfd-fc4590f50d19/copy.svg"
+-                                         height="10"
+-                                         width="10"
+-                                         alt="Copy"
+-                                       >
+                                ...
+                  ...
+
+    at <unknown> (https://react.dev/link/hydration-mismatch)
+    at svg (<anonymous>)
+    at LoginPage (src/app/login/page.tsx:160:72)
+  158 |                   aria-pressed={showPassword}
+  159 |                 >
+> 160 |                   {showPassword ? <EyeOff className="size-[18px]" /> : <Eye className="size-[18px]" />}
+      |                                                                        ^
+  161 |                 </button>
+  162 |               </div>
+  163 |             </div>
+[browser] Encountered a script tag while rendering React component. Scripts inside React components are never executed when rendering on the client. Consider using template tag instead (https://developer.mozilla.org/en-US/docs/Web/HTML/Element/template). 
+[browser] Uncaught Error: Hydration failed because the server rendered HTML didn't match the client. As a result this tree will be regenerated on the client. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+https://react.dev/link/hydration-mismatch
+
+  ...
+    <HotReload globalError={[...]} webSocket={WebSocket} staticIndicatorState={{pathname:null, ...}}>
+      <AppDevOverlayErrorBoundary globalError={[...]}>
+        <ReplaySsrOnlyErrors>
+        <DevRootHTTPAccessFallbackBoundary>
+          <HTTPAccessFallbackBoundary notFound={<NotAllowedRootHTTPFallbackError>}>
+            <HTTPAccessFallbackErrorBoundary pathname="/login" notFound={<NotAllowedRootHTTPFallbackError>} ...>
+              <RedirectBoundary>
+                <RedirectErrorBoundary router={{...}}>
+                  <Head>
+                  <__next_root_layout_boundary__>
+                    <SegmentViewNode type="layout" pagePath="layout.tsx">
+                      <SegmentTrieNode>
+                      <link>
+                      <script>
+                      <script>
+                      <script>
+                      <RootLayout>
+                        <html lang="en" suppressHydrationWarning={true} className="geist_a715...">
+                          <body
+                            className="min-h-full flex flex-col bg-background text-foreground"
+-                           data-new-gr-c-s-check-loaded="14.1336.0"
+-                           data-gr-ext-installed=""
+                          >
+                            ...
+                              <form onSubmit={function handleSubmit} className="space-y-[1..." noValidate={true}>
+                                <div>
+                                <div>
+                                  <label>
+                                  <div className="relative">
+                                    <input>
+                                    <button
+                                      type="button"
+                                      onClick={function onClick}
++                                     className="absolute top-1/2 right-[5px] flex size-9 -translate-y-1/2 items-cente..."
+-                                     className="ext-btn ext-copypw copyPwJs"
++                                     aria-label="Show password"
+-                                     aria-label={null}
++                                     aria-pressed={false}
+-                                     aria-pressed={null}
+-                                     title="Copy"
+                                    >
+                                      <Eye className="size-[18px]">
++                                       <svg
++                                         ref={null}
++                                         xmlns="http://www.w3.org/2000/svg"
++                                         width={24}
++                                         height={24}
++                                         viewBox="0 0 24 24"
++                                         fill="none"
++                                         stroke="currentColor"
++                                         strokeWidth={2}
++                                         strokeLinecap="round"
++                                         strokeLinejoin="round"
++                                         className="lucide lucide-eye size-[18px]"
++                                         aria-hidden="true"
++                                       >
+-                                       <img
+-                                         src="chrome-extension://3f4650da-4228-4f59-bdfd-fc4590f50d19/copy.svg"
+-                                         height="10"
+-                                         width="10"
+-                                         alt="Copy"
+-                                       >
+                                ...
+                  ...
+
+    at <unknown> (https://react.dev/link/hydration-mismatch)
+    at svg (<anonymous>)
+    at LoginPage (src/app/login/page.tsx:160:72)
+  158 |                   aria-pressed={showPassword}
+  159 |                 >
+> 160 |                   {showPassword ? <EyeOff className="size-[18px]" /> : <Eye className="size-[18px]" />}
+      |                                                                        ^
+  161 |                 </button>
+  162 |               </div>
+  163 |             </div>
+[browser] Encountered a script tag while rendering React component. Scripts inside React components are never executed when rendering on the client. Consider using template tag instead (https://developer.mozilla.org/en-US/docs/Web/HTML/Element/template). 
+[browser] Uncaught Error: Hydration failed because the server rendered HTML didn't match the client. As a result this tree will be regenerated on the client. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+https://react.dev/link/hydration-mismatch
+
+  ...
+    <HTTPAccessFallbackBoundary notFound={undefined} forbidden={undefined} unauthorized={undefined}>
+      <RedirectBoundary>
+        <RedirectErrorBoundary router={{...}}>
+          <InnerLayoutRouter url="/login" tree={[...]} params={{}} cacheNode={{rsc:{...}, ...}} segmentPath={[...]} ...>
+            <SegmentViewNode type="page" pagePath="login/page...">
+              <SegmentTrieNode>
+              <ClientPageRoot Component={function LoginPage} serverProvidedParams={{...}}>
+                <LoginPage params={Promise} searchParams={Promise}>
+                  <div className="login-scop...">
+                    <div className="w-full max...">
+                      <div className="rounded-[2...">
+                        <div>
+                        <form onSubmit={function handleSubmit} className="space-y-[1..." noValidate={true}>
+                          <div>
+                          <div>
+                            <label>
+                            <div className="relative">
+                              <input>
+                              <button
+                                type="button"
+                                onClick={function onClick}
++                               className="absolute top-1/2 right-[5px] flex size-9 -translate-y-1/2 items-center just..."
+-                               className="ext-btn ext-copypw copyPwJs"
++                               aria-label="Show password"
+-                               aria-label={null}
++                               aria-pressed={false}
+-                               aria-pressed={null}
+-                               title="Copy"
+                              >
+                                <Eye className="size-[18px]">
++                                 <svg
++                                   ref={null}
++                                   xmlns="http://www.w3.org/2000/svg"
++                                   width={24}
++                                   height={24}
++                                   viewBox="0 0 24 24"
++                                   fill="none"
++                                   stroke="currentColor"
++                                   strokeWidth={2}
++                                   strokeLinecap="round"
++                                   strokeLinejoin="round"
++                                   className="lucide lucide-eye size-[18px]"
++                                   aria-hidden="true"
++                                 >
+-                                 <img
+-                                   src="chrome-extension://3f4650da-4228-4f59-bdfd-fc4590f50d19/copy.svg"
+-                                   height="10"
+-                                   width="10"
+-                                   alt="Copy"
+-                                 >
+                          ...
+                      ...
+            ...
+          ...
+
+    at <unknown> (https://react.dev/link/hydration-mismatch)
+    at svg (<anonymous>)
+    at LoginPage (src/app/login/page.tsx:160:72)
+  158 |                   aria-pressed={showPassword}
+  159 |                 >
+> 160 |                   {showPassword ? <EyeOff className="size-[18px]" /> : <Eye className="size-[18px]" />}
+      |                                                                        ^
+  161 |                 </button>
+  162 |               </div>
+  163 |             </div>
+[browser] Encountered a script tag while rendering React component. Scripts inside React components are never executed when rendering on the client. Consider using template tag instead (https://developer.mozilla.org/en-US/docs/Web/HTML/Element/template). 
+[browser] Uncaught Error: Hydration failed because the server rendered HTML didn't match the client. As a result this tree will be regenerated on the client. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+https://react.dev/link/hydration-mismatch
+
+  ...
+    <HotReload globalError={[...]} webSocket={WebSocket} staticIndicatorState={{pathname:null, ...}}>
+      <AppDevOverlayErrorBoundary globalError={[...]}>
+        <ReplaySsrOnlyErrors>
+        <DevRootHTTPAccessFallbackBoundary>
+          <HTTPAccessFallbackBoundary notFound={<NotAllowedRootHTTPFallbackError>}>
+            <HTTPAccessFallbackErrorBoundary pathname="/login" notFound={<NotAllowedRootHTTPFallbackError>} ...>
+              <RedirectBoundary>
+                <RedirectErrorBoundary router={{...}}>
+                  <Head>
+                  <__next_root_layout_boundary__>
+                    <SegmentViewNode type="layout" pagePath="layout.tsx">
+                      <SegmentTrieNode>
+                      <link>
+                      <script>
+                      <script>
+                      <script>
+                      <RootLayout>
+                        <html lang="en" suppressHydrationWarning={true} className="geist_a715...">
+                          <body
+                            className="min-h-full flex flex-col bg-background text-foreground"
+-                           data-new-gr-c-s-check-loaded="14.1336.0"
+-                           data-gr-ext-installed=""
+                          >
+                            ...
+                              <form onSubmit={function handleSubmit} className="space-y-[1..." noValidate={true}>
+                                <div>
+                                <div>
+                                  <label>
+                                  <div className="relative">
+                                    <input>
+                                    <button
+                                      type="button"
+                                      onClick={function onClick}
++                                     className="absolute top-1/2 right-[5px] flex size-9 -translate-y-1/2 items-cente..."
+-                                     className="ext-btn ext-copypw copyPwJs"
++                                     aria-label="Show password"
+-                                     aria-label={null}
++                                     aria-pressed={false}
+-                                     aria-pressed={null}
+-                                     title="Copy"
+                                    >
+                                      <Eye className="size-[18px]">
++                                       <svg
++                                         ref={null}
++                                         xmlns="http://www.w3.org/2000/svg"
++                                         width={24}
++                                         height={24}
++                                         viewBox="0 0 24 24"
++                                         fill="none"
++                                         stroke="currentColor"
++                                         strokeWidth={2}
++                                         strokeLinecap="round"
++                                         strokeLinejoin="round"
++                                         className="lucide lucide-eye size-[18px]"
++                                         aria-hidden="true"
++                                       >
+-                                       <img
+-                                         src="chrome-extension://3f4650da-4228-4f59-bdfd-fc4590f50d19/copy.svg"
+-                                         height="10"
+-                                         width="10"
+-                                         alt="Copy"
+-                                       >
+                                ...
+                  ...
+
+    at <unknown> (https://react.dev/link/hydration-mismatch)
+    at svg (<anonymous>)
+    at LoginPage (src/app/login/page.tsx:160:72)
+  158 |                   aria-pressed={showPassword}
+  159 |                 >
+> 160 |                   {showPassword ? <EyeOff className="size-[18px]" /> : <Eye className="size-[18px]" />}
+      |                                                                        ^
+  161 |                 </button>
+  162 |               </div>
+  163 |             </div>
+[browser] Encountered a script tag while rendering React component. Scripts inside React components are never executed when rendering on the client. Consider using template tag instead (https://developer.mozilla.org/en-US/docs/Web/HTML/Element/template). 
+[browser] Uncaught Error: Hydration failed because the server rendered HTML didn't match the client. As a result this tree will be regenerated on the client. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+https://react.dev/link/hydration-mismatch
+
+  ...
+    <HotReload globalError={[...]} webSocket={WebSocket} staticIndicatorState={{pathname:null, ...}}>
+      <AppDevOverlayErrorBoundary globalError={[...]}>
+        <ReplaySsrOnlyErrors>
+        <DevRootHTTPAccessFallbackBoundary>
+          <HTTPAccessFallbackBoundary notFound={<NotAllowedRootHTTPFallbackError>}>
+            <HTTPAccessFallbackErrorBoundary pathname="/login" notFound={<NotAllowedRootHTTPFallbackError>} ...>
+              <RedirectBoundary>
+                <RedirectErrorBoundary router={{...}}>
+                  <Head>
+                  <__next_root_layout_boundary__>
+                    <SegmentViewNode type="layout" pagePath="layout.tsx">
+                      <SegmentTrieNode>
+                      <link>
+                      <script>
+                      <script>
+                      <script>
+                      <RootLayout>
+                        <html lang="en" suppressHydrationWarning={true} className="geist_a715...">
+                          <body
+                            className="min-h-full flex flex-col bg-background text-foreground"
+-                           data-new-gr-c-s-check-loaded="14.1336.0"
+-                           data-gr-ext-installed=""
+                          >
+                            ...
+                              <form onSubmit={function handleSubmit} className="space-y-[1..." noValidate={true}>
+                                <div>
+                                <div>
+                                  <label>
+                                  <div className="relative">
+                                    <input>
+                                    <button
+                                      type="button"
+                                      onClick={function onClick}
++                                     className="absolute top-1/2 right-[5px] flex size-9 -translate-y-1/2 items-cente..."
+-                                     className="ext-btn ext-copypw copyPwJs"
++                                     aria-label="Show password"
+-                                     aria-label={null}
++                                     aria-pressed={false}
+-                                     aria-pressed={null}
+-                                     title="Copy"
+                                    >
+                                      <Eye className="size-[18px]">
++                                       <svg
++                                         ref={null}
++                                         xmlns="http://www.w3.org/2000/svg"
++                                         width={24}
++                                         height={24}
++                                         viewBox="0 0 24 24"
++                                         fill="none"
++                                         stroke="currentColor"
++                                         strokeWidth={2}
++                                         strokeLinecap="round"
++                                         strokeLinejoin="round"
++                                         className="lucide lucide-eye size-[18px]"
++                                         aria-hidden="true"
++                                       >
+-                                       <img
+-                                         src="chrome-extension://3f4650da-4228-4f59-bdfd-fc4590f50d19/copy.svg"
+-                                         height="10"
+-                                         width="10"
+-                                         alt="Copy"
+-                                       >
+                                ...
+                  ...
+
+    at <unknown> (https://react.dev/link/hydration-mismatch)
+    at svg (<anonymous>)
+    at LoginPage (src/app/login/page.tsx:160:72)
+  158 |                   aria-pressed={showPassword}
+  159 |                 >
+> 160 |                   {showPassword ? <EyeOff className="size-[18px]" /> : <Eye className="size-[18px]" />}
+      |                                                                        ^
+  161 |                 </button>
+  162 |               </div>
+  163 |             </div>
