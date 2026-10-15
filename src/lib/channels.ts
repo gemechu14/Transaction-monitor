@@ -1,6 +1,7 @@
 import type { ChannelId } from "@/config/channels";
+import { WSO2_SOURCE_LABELS, type Wso2ChannelSource } from "@/config/wso2-sources";
 import type { DateRange } from "@/lib/date";
-import { channelName, computeOverview } from "@/lib/overview";
+import { channelName, computeOverview, type SourceRow } from "@/lib/overview";
 import type { OverviewDataset } from "@/types/api";
 
 /**
@@ -272,4 +273,68 @@ export function groupDays(rows: DayRow[], granularity: Granularity): PeriodRow[]
     const sublabel = month.length < full ? `${month.length} of ${full} days` : `${full} days`;
     return toPeriodRow(month, `${MONTH_NAMES[m - 1]} ${y}`, sublabel);
   });
+}
+
+/* ---------- Live per-source figures (WSO2 allAdvanced) ---------- */
+
+/** Rankings the live totals support. Success rate and latency need figures the API doesn't return yet. */
+export type LiveRankMetric = "value" | "transactions" | "avgTicket";
+
+export const LIVE_RANK_ITEMS: Record<LiveRankMetric, string> = {
+  value: "Rank by value",
+  transactions: "Rank by transactions",
+  avgTicket: "Rank by avg ticket",
+  // success: "Rank by success rate",
+  // latency: "Rank by latency",
+};
+
+export interface SourceStat {
+  source: Wso2ChannelSource;
+  name: string;
+  count: number;
+  value: number;
+  avgTicket: number;
+  /** Fractions 0-1 of all sources' transactions and amount. */
+  share: number;
+  valueShare: number;
+}
+
+export interface SourceRanks {
+  value: number;
+  transactions: number;
+  avgTicket: number;
+}
+
+const LIVE_KEY: Record<LiveRankMetric, (s: SourceStat) => number> = {
+  value: (s) => s.value,
+  transactions: (s) => s.count,
+  avgTicket: (s) => s.avgTicket,
+};
+
+export function sortSources(stats: SourceStat[], by: LiveRankMetric): SourceStat[] {
+  return [...stats].sort((a, b) => LIVE_KEY[by](b) - LIVE_KEY[by](a));
+}
+
+export function computeSourceStats(rows: SourceRow[]): {
+  stats: SourceStat[];
+  platform: { avgTicket: number };
+} {
+  const allCount = rows.reduce((acc, r) => acc + r.totalTransactions, 0);
+  const allValue = rows.reduce((acc, r) => acc + r.totalAmount, 0);
+  const stats = rows.map((r) => ({
+    source: r.source,
+    name: WSO2_SOURCE_LABELS[r.source],
+    count: r.totalTransactions,
+    value: r.totalAmount,
+    avgTicket: r.totalTransactions ? r.totalAmount / r.totalTransactions : 0,
+    share: allCount ? r.totalTransactions / allCount : 0,
+    valueShare: allValue ? r.totalAmount / allValue : 0,
+  }));
+  return { stats, platform: { avgTicket: allCount ? allValue / allCount : 0 } };
+}
+
+/** 1-based position of `source` in each live ranking. */
+export function sourceRanks(stats: SourceStat[], source: Wso2ChannelSource): SourceRanks {
+  const rank = (by: LiveRankMetric) => sortSources(stats, by).findIndex((s) => s.source === source) + 1;
+  return { value: rank("value"), transactions: rank("transactions"), avgTicket: rank("avgTicket") };
 }

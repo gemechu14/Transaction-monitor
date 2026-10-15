@@ -1,14 +1,11 @@
 "use client";
 
-import { Skeleton } from "@/components/ui/skeleton";
 import {
-  SLOW_LATENCY_MS,
   formatEtb2,
-  sortChannels,
-  type ChannelRanks,
-  type ChannelStat,
-  type ChannelsView,
-  type RankMetric,
+  sortSources,
+  type LiveRankMetric,
+  type SourceRanks,
+  type SourceStat,
 } from "@/lib/channels";
 import { formatCompactNumber } from "@/lib/format";
 import { formatEtb } from "@/lib/overview";
@@ -20,28 +17,36 @@ const TOP_COUNT = 5;
 const CARD_CLASS =
   "row-span-3 grid grid-rows-subgrid gap-y-1.5 rounded-2xl border border-border bg-card px-[22px] pt-5 pb-[22px] max-[620px]:p-[18px]";
 
+const TITLE_CLASS = "text-base font-semibold text-foreground";
+const VALUE_CLASS =
+  "text-[32px] leading-tight font-bold whitespace-nowrap text-primary-display tabular-nums max-[1640px]:text-[28px] max-[620px]:text-2xl";
+const DETAIL_CLASS = "text-[15px] text-muted-foreground tabular-nums max-[620px]:text-[13px]";
+
 /** How the caption above the top 5 describes each ranking. */
-const RANK_CAPTION: Record<RankMetric, string> = {
-  transactions: "most transactions",
+const RANK_CAPTION: Record<LiveRankMetric, string> = {
   value: "highest value",
-  success: "highest success rate",
-  latency: "slowest response time",
+  transactions: "most transactions",
+  avgTicket: "highest average ticket",
+  // success: "highest success rate",
+  // latency: "slowest response time",
 };
 
 const GRID_CLASS =
   "grid grid-cols-1 gap-3 min-[561px]:grid-cols-2 min-[901px]:grid-cols-3 min-[1181px]:grid-cols-4";
 
-function Latency({ ms }: { ms: number }) {
-  const slow = ms > SLOW_LATENCY_MS;
-  return (
-    <span className={cn(slow && "font-medium text-orange-strong")}>
-      {Math.round(ms)} ms
-      {slow && (
-        <span className="sr-only"> (slow, over {SLOW_LATENCY_MS} ms)</span>
-      )}
-    </span>
-  );
-}
+/** Cards in the single-source view. */
+export const FOCUS_CARD_COUNT = 4;
+
+// Latency styling, for when the API returns response times:
+// function Latency({ ms }: { ms: number }) {
+//   const slow = ms > SLOW_LATENCY_MS;
+//   return (
+//     <span className={cn(slow && "font-medium text-orange-strong")}>
+//       {Math.round(ms)} ms
+//       {slow && <span className="sr-only"> (slow, over {SLOW_LATENCY_MS} ms)</span>}
+//     </span>
+//   );
+// }
 
 function StatCard({
   title,
@@ -54,69 +59,82 @@ function StatCard({
 }) {
   return (
     <div className={CARD_CLASS}>
-      <p className="text-base font-semibold text-foreground">{title}</p>
-      <p className="text-[32px] leading-tight font-bold whitespace-nowrap text-primary-display tabular-nums max-[1640px]:text-[28px] max-[620px]:text-2xl">
-        {value}
-      </p>
-      <p className="text-[15px] text-muted-foreground tabular-nums max-[620px]:text-[13px]">
+      <p className={TITLE_CLASS}>{title}</p>
+      <p className={`kpi-reveal ${VALUE_CLASS}`}>{value}</p>
+      <p className={`kpi-reveal ${DETAIL_CLASS}`} style={{ animationDelay: "60ms" }}>
         {detail}
       </p>
     </div>
   );
 }
 
-export function ChannelCardsSkeleton({ count = 5 }: { count?: number }) {
+/** A shimmer bar inside an invisible line of the real type, so heights match exactly. */
+function ShimmerLine({ className, barClassName, delay }: { className: string; barClassName: string; delay: string }) {
   return (
-    <div className={GRID_CLASS}>
-      {Array.from({ length: count }).map((_, index) => (
-        <div key={index} className={CARD_CLASS}>
-          <Skeleton className="h-5 w-28" />
-          <Skeleton className="h-9 w-36" />
-          <Skeleton className="h-4 w-40" />
+    <p className={cn("relative", className)}>
+      <span className="invisible">0</span>
+      <span
+        className={cn("skeleton-shimmer absolute top-1/2 left-0 -translate-y-1/2", barClassName)}
+        style={{ animationDelay: delay }}
+      />
+    </p>
+  );
+}
+
+/**
+ * Mirrors either view: `ranking` has the caption above the top 5, otherwise it's
+ * the single-source cards with the rank chips below.
+ */
+export function ChannelCardsSkeleton({ ranking }: { ranking: boolean }) {
+  const count = ranking ? TOP_COUNT : FOCUS_CARD_COUNT;
+  return (
+    <div className={ranking ? "space-y-2.5" : "flex flex-col-reverse gap-4"} aria-busy="true">
+      {ranking ? (
+        <ShimmerLine className="text-[13px]" barClassName="h-[0.85em] w-56 rounded-full" delay="0ms" />
+      ) : (
+        <div className="flex h-[30px] items-center gap-2">
+          {[112, 120, 136, 128].map((width, index) => (
+            <span key={index} className="skeleton-shimmer h-[30px] rounded-full" style={{ width }} />
+          ))}
         </div>
-      ))}
+      )}
+      <div className={GRID_CLASS}>
+        {Array.from({ length: count }).map((_, index) => {
+          const delay = `${index * 140}ms`;
+          return (
+            <div key={index} className={CARD_CLASS}>
+              <ShimmerLine className={TITLE_CLASS} barClassName="h-[0.85em] w-28 rounded-full" delay={delay} />
+              <ShimmerLine className={VALUE_CLASS} barClassName="h-[0.8em] w-[58%] max-w-44 rounded-lg" delay={delay} />
+              <ShimmerLine className={DETAIL_CLASS} barClassName="h-[0.8em] w-[72%] max-w-56 rounded-full" delay={delay} />
+            </div>
+          );
+        })}
+      </div>
+      <span className="sr-only">Loading channel figures</span>
     </div>
   );
 }
 
-/** All-channels view: only the top 5 by the chosen metric; pick a platform to see any other. */
-export function ChannelRankingGrid({
-  stats,
-  rankBy,
-}: {
-  stats: ChannelStat[];
-  rankBy: RankMetric;
-}) {
-  const top = sortChannels(stats, rankBy).slice(0, TOP_COUNT);
+/** All-sources view: only the top 5 by the chosen metric; pick a source to see any other. */
+export function ChannelRankingGrid({ stats, rankBy }: { stats: SourceStat[]; rankBy: LiveRankMetric }) {
+  const top = sortSources(stats, rankBy).slice(0, TOP_COUNT);
 
   return (
     <section aria-labelledby="top-channels-caption" className="space-y-2.5">
-      <p
-        id="top-channels-caption"
-        className="text-[13px] text-muted-foreground"
-      >
+      <p id="top-channels-caption" className="text-[13px] text-muted-foreground">
         Top {top.length} of {stats.length} channels by{" "}
-        <span className="font-semibold text-foreground">
-          {RANK_CAPTION[rankBy]}
-        </span>
+        <span className="font-semibold text-foreground">{RANK_CAPTION[rankBy]}</span>
       </p>
       <div className={GRID_CLASS}>
         {top.map((s) => (
           <StatCard
-            key={s.channel}
+            key={s.source}
             title={s.name}
-            value={formatEtb2(s.value)}
+            value={rankBy === "avgTicket" ? formatEtb(s.avgTicket) : formatEtb2(s.value)}
             detail={
-              <>
-                {formatCompactNumber(s.count)} transactions
-                {rankBy === "success" &&
-                  `, ${(s.successRate * 100).toFixed(1)}% success`}
-                {rankBy === "latency" && (
-                  <>
-                    , <Latency ms={s.avgLatencyMs} />
-                  </>
-                )}
-              </>
+              rankBy === "avgTicket"
+                ? `per transaction, ${formatCompactNumber(s.count)} transactions`
+                : `${formatCompactNumber(s.count)} transactions`
             }
           />
         ))}
@@ -125,31 +143,34 @@ export function ChannelRankingGrid({
   );
 }
 
-/** Single-channel view: six cards about one channel. */
+/** Single-source view: cards about one source. */
 export function ChannelFocusGrid({
   selected,
   platform,
+  periodDays,
 }: {
-  selected: NonNullable<ChannelsView["selected"]>;
-  platform: ChannelsView["platform"];
+  selected: SourceStat;
+  platform: { avgTicket: number };
+  periodDays: number;
 }) {
   return (
     <div className={GRID_CLASS}>
       <StatCard
         title="Total value"
         value={formatEtb2(selected.value)}
-        detail={`Avg ${formatEtb(selected.avgTicket)} per transaction`}
+        detail={`${(selected.valueShare * 100).toFixed(1)}% of all value`}
       />
       <StatCard
         title="Transactions"
         value={formatCompactNumber(selected.count)}
-        detail={`≈ ${formatCompactNumber(selected.perDay)} per day`}
+        detail={`≈ ${formatCompactNumber(periodDays ? selected.count / periodDays : 0)} per day`}
       />
+      {/* Success rate and latency need figures the API doesn't return yet.
       <StatCard
         title="Success rate"
         value={`${(selected.successRate * 100).toFixed(1)}%`}
         detail={`Failure ${((1 - selected.successRate) * 100).toFixed(1)}%`}
-      />
+      /> */}
       <StatCard
         title="Share of total"
         value={`${(selected.share * 100).toFixed(1)}%`}
@@ -158,35 +179,28 @@ export function ChannelFocusGrid({
       <StatCard
         title="Avg ticket"
         value={formatEtb(selected.avgTicket)}
-        detail={`Platform average ${formatEtb(platform.avgTicket)}`}
+        detail={`All sources average ${formatEtb(platform.avgTicket)}`}
       />
-      <StatCard
+      {/* <StatCard
         title="Avg latency"
         value={<Latency ms={selected.avgLatencyMs} />}
         detail={`Platform average ${Math.round(platform.avgLatencyMs)} ms`}
-      />
+      /> */}
     </div>
   );
 }
 
-export function RankChips({
-  ranks,
-  total,
-}: {
-  ranks: ChannelRanks;
-  total: number;
-}) {
+export function RankChips({ ranks, total }: { ranks: SourceRanks; total: number }) {
   const chips = [
-    { rank: ranks.transactions, label: "by transactions" },
     { rank: ranks.value, label: "by value" },
-    { rank: ranks.success, label: "by success rate" },
-    { rank: ranks.fastest, label: "fastest" },
+    { rank: ranks.transactions, label: "by transactions" },
+    { rank: ranks.avgTicket, label: "by avg ticket" },
+    // { rank: ranks.success, label: "by success rate" },
+    // { rank: ranks.fastest, label: "fastest" },
   ];
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <span className="mr-1 text-[13px] font-medium text-muted-foreground">
-        Among {total} channels
-      </span>
+      <span className="mr-1 text-[13px] font-medium text-muted-foreground">Among {total} channels</span>
       {chips.map((chip) => (
         <span
           key={chip.label}

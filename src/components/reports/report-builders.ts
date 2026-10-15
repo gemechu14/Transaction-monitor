@@ -1,4 +1,5 @@
 import type { ChannelId } from "@/config/channels";
+import { WSO2_SOURCE_LABELS, type Wso2ChannelSource, type Wso2Source } from "@/config/wso2-sources";
 import {
   RANK_ITEMS,
   formatEtb2,
@@ -238,12 +239,12 @@ export function buildChannelsReport(
 export type ComparisonExportInput =
   | {
       type: "channels";
-      channels: { a: ChannelId; b: ChannelId };
+      channels: { a: Wso2ChannelSource; b: Wso2ChannelSource };
       range: DateRange;
     }
   | {
       type: "periods";
-      channel: ChannelId | "all";
+      channel: Wso2Source;
       periods: { a: PeriodOption; b: PeriodOption };
     };
 
@@ -345,7 +346,7 @@ export function buildComparisonReport(
   }
 
   const { periods, channel } = input;
-  const platform = channel === "all" ? "All platforms" : channelName(channel);
+  const platform = WSO2_SOURCE_LABELS[channel];
   return {
     fileBase: `comparison-${fileSlug(channel)}-${periods.a.range.from}-vs-${periods.b.range.from}`,
     spec: {

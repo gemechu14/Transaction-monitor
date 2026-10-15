@@ -1,8 +1,9 @@
 import type { ChannelId } from "@/config/channels";
-import type { DateRange } from "@/lib/date";
+import { WSO2_SOURCE_LABELS, type Wso2Source } from "@/config/wso2-sources";
+import { addDays, toISODate, type DateRange } from "@/lib/date";
 import { formatCompactNumber } from "@/lib/format";
-import { channelName, computeOverview, formatShortDate } from "@/lib/overview";
-import type { OverviewDataset } from "@/types/api";
+import { channelName, computeOverview, formatShortDate, pickSourceTotals } from "@/lib/overview";
+import type { AllAdvancedTotals, OverviewDataset } from "@/types/api";
 
 /**
  * Maths and wording for the Comparison page. Each side is an amount (primary)
@@ -368,4 +369,73 @@ export function bottomLine(
 
 export function sideName(channel: ChannelId | "all"): string {
   return channel === "all" ? "All platforms" : channelName(channel);
+}
+
+/* ---------- live periods and figures (WSO2 allAdvanced) ---------- */
+
+/** How many choices each interval offers, counting back from yesterday. */
+const LIVE_OPTION_COUNT: Record<Interval, number> = { day: 30, week: 8, month: 6 };
+
+function weekLabel(from: string, to: string): string {
+  return from.slice(0, 7) === to.slice(0, 7)
+    ? `${Number(from.slice(8))} – ${formatShortDate(to)}`
+    : `${formatShortDate(from)} – ${formatShortDate(to)}`;
+}
+
+/**
+ * Real calendar periods for the live API, oldest first: the last 30 days, the
+ * last 8 full weeks (Mon – Sun) or the last 6 full months. Today, the current
+ * week and the current month are left out, since they're still partial.
+ */
+export function buildLivePeriodOptions(interval: Interval, today: Date = new Date()): PeriodOption[] {
+  const count = LIVE_OPTION_COUNT[interval];
+  const options: PeriodOption[] = [];
+
+  if (interval === "day") {
+    for (let i = count; i >= 1; i--) {
+      const iso = toISODate(addDays(today, -i));
+      options.push({ id: iso, label: `${weekday(iso)} ${formatShortDate(iso)}`, shortLabel: formatShortDate(iso), range: { from: iso, to: iso } });
+    }
+    return options;
+  }
+
+  if (interval === "week") {
+    // Monday of the current week, then step back whole weeks.
+    const thisMonday = addDays(today, -((today.getDay() + 6) % 7));
+    for (let i = count; i >= 1; i--) {
+      const from = toISODate(addDays(thisMonday, -7 * i));
+      const to = toISODate(addDays(thisMonday, -7 * i + 6));
+      const label = weekLabel(from, to);
+      options.push({ id: from, label, shortLabel: label, range: { from, to } });
+    }
+    return options;
+  }
+
+  for (let i = count; i >= 1; i--) {
+    const first = new Date(today.getFullYear(), today.getMonth() - i, 1);
+    const last = new Date(today.getFullYear(), today.getMonth() - i + 1, 0);
+    const from = toISODate(first);
+    options.push({
+      id: from,
+      label: `${MONTHS[first.getMonth()]} ${first.getFullYear()}`,
+      shortLabel: MONTHS[first.getMonth()],
+      range: { from, to: toISODate(last) },
+    });
+  }
+  return options;
+}
+
+/** One source's (or all sources') amount and count from an allAdvanced response; `null` until loaded. */
+export function liveFigures(
+  totals: AllAdvancedTotals | undefined,
+  source: Wso2Source,
+): Pick<SideFigures, "amount" | "transactions"> {
+  const picked = pickSourceTotals(totals, source);
+  return picked
+    ? { amount: picked.totalAmount, transactions: picked.totalTransactions }
+    : { amount: null, transactions: null };
+}
+
+export function liveSideName(source: Wso2Source): string {
+  return WSO2_SOURCE_LABELS[source];
 }

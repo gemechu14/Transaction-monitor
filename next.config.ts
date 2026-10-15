@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   async rewrites() {
-    // Proxies auth/admin calls to the TM auth backend so the browser sees them
+    // Proxies auth/admin/dashboard calls to the TM auth backend so the browser sees them
     // as same-origin requests — sidesteps the backend's CORS gap entirely for
     // local dev (see FRONTEND_INTEGRATION.md). Only active when AUTH_BACKEND_URL
     // is set; leave unset once the backend is deployed behind the same origin.
@@ -12,6 +12,7 @@ const nextConfig: NextConfig = {
     return [
       { source: "/api/auth/:path*", destination: `${authBackend}/api/auth/:path*` },
       { source: "/api/admin/:path*", destination: `${authBackend}/api/admin/:path*` },
+      { source: "/api/dashboard/:path*", destination: `${authBackend}/api/dashboard/:path*` },
     ];
   },
 };

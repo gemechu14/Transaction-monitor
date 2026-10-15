@@ -21,37 +21,37 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CHANNEL_LIST, type ChannelId } from "@/config/channels";
-import { useMe, useOverviewDataset } from "@/hooks";
-import { RANK_ITEMS, computeChannels, type RankMetric } from "@/lib/channels";
+import type { ChannelId } from "@/config/channels";
+import { WSO2_SOURCE_LABELS, WSO2_SOURCES, type Wso2Source } from "@/config/wso2-sources";
+import { useAllAdvanced, useOverviewDataset } from "@/hooks";
+import {
+  LIVE_RANK_ITEMS,
+  computeChannels,
+  computeSourceStats,
+  sourceRanks,
+  type LiveRankMetric,
+} from "@/lib/channels";
 import {
   DEFAULT_PERIOD,
-  channelName,
   countDays,
   formatRangeLabel,
+  sourceRows,
   type OverviewPeriod,
 } from "@/lib/overview";
 
-const PLATFORM_ITEMS: Record<string, string> = {
-  all: "All platforms",
-  ...Object.fromEntries(CHANNEL_LIST.map((c) => [c.id, c.name])),
-};
-
-/** Non-admin users can only rank by volume and value; value is their default. */
-const USER_RANK_METRICS: RankMetric[] = ["value", "transactions"];
-
 export default function ChannelsPage() {
   const [period, setPeriod] = useState<OverviewPeriod>(DEFAULT_PERIOD);
-  const [channel, setChannel] = useState<ChannelId | "all">("all");
-  const [rankChoice, setRankChoice] = useState<RankMetric | null>(null);
+  // `source` drives the live cards. The day-by-day table is still sample data
+  // (a new API is coming), so it stays on all platforms for now.
+  const [source, setSource] = useState<Wso2Source>("all");
+  const channel: ChannelId | "all" = "all";
+  // Every role ranks by value by default, matching the Overview.
+  const [rankBy, setRankBy] = useState<LiveRankMetric>("value");
 
-  const meQuery = useMe();
-  const isAdmin = meQuery.data?.user.role === "ADMIN";
-  const rankMetrics = isAdmin ? (Object.keys(RANK_ITEMS) as RankMetric[]) : USER_RANK_METRICS;
-  const rankItems = Object.fromEntries(rankMetrics.map((key) => [key, RANK_ITEMS[key]]));
-  // Until the user picks, fall back to the role's default (and drop a pick the role can't use).
-  const rankBy: RankMetric =
-    rankChoice && rankMetrics.includes(rankChoice) ? rankChoice : isAdmin ? "transactions" : "value";
+  // Same query (and cache) as the Overview: one call per period, every source in it.
+  const totalsQuery = useAllAdvanced({ startDate: period.range.from, endDate: period.range.to });
+  const live = useMemo(() => computeSourceStats(sourceRows(totalsQuery.data)), [totalsQuery.data]);
+  const selected = source === "all" ? undefined : live.stats.find((s) => s.source === source);
 
   const datasetQuery = useOverviewDataset();
   const dataset = datasetQuery.data;
@@ -62,7 +62,8 @@ export default function ChannelsPage() {
     [dataset, period.range, channel],
   );
 
-  const platformLabel = channel === "all" ? "All platforms" : channelName(channel);
+  const sourceLabel = WSO2_SOURCE_LABELS[source];
+  const platformLabel = "All platforms";
   const dataNote = view?.clipped
     ? `(${formatRangeLabel(period.range)}; data available from 1 Sep)`
     : undefined;
@@ -74,12 +75,12 @@ export default function ChannelsPage() {
           <h2 className="text-[22px] font-bold tracking-[-0.02em] text-foreground">Channel performance</h2>
           <span className="inline-flex items-center gap-1.5 rounded-full bg-primary-soft py-1 pr-2 pl-2.5 text-xs font-medium text-primary-strong">
             <span className="size-1.5 shrink-0 rounded-full bg-primary" />
-            {platformLabel}
-            {channel !== "all" && (
+            {sourceLabel}
+            {source !== "all" && (
               <button
                 type="button"
-                onClick={() => setChannel("all")}
-                aria-label="Clear platform filter"
+                onClick={() => setSource("all")}
+                aria-label="Show all sources"
                 className="-mr-0.5 rounded-full p-0.5 hover:bg-primary/15 focus-visible:outline-2 focus-visible:outline-primary"
               >
                 <X className="size-3" />
@@ -90,33 +91,32 @@ export default function ChannelsPage() {
 
         <div className="flex flex-wrap items-center gap-2">
           <Select
-            items={PLATFORM_ITEMS}
-            value={channel}
-            onValueChange={(value) => setChannel(value as ChannelId | "all")}
+            items={WSO2_SOURCE_LABELS}
+            value={source}
+            onValueChange={(value) => setSource(value as Wso2Source)}
           >
-            <SelectTrigger aria-label="Platform" className="w-48 rounded-[10px] bg-card px-3.5 data-[size=default]:h-10">
+            <SelectTrigger aria-label="Source" className="w-48 rounded-[10px] bg-card px-3.5 data-[size=default]:h-10">
               <Layers className="size-4 text-primary-strong" />
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All platforms</SelectItem>
-              {CHANNEL_LIST.map((c) => (
-                <SelectItem key={c.id} value={c.id}>
-                  {c.name}
+              {WSO2_SOURCES.map((id) => (
+                <SelectItem key={id} value={id}>
+                  {WSO2_SOURCE_LABELS[id]}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
-          {channel === "all" && (
-            <Select items={rankItems} value={rankBy} onValueChange={(value) => setRankChoice(value as RankMetric)}>
+          {source === "all" && (
+            <Select items={LIVE_RANK_ITEMS} value={rankBy} onValueChange={(value) => setRankBy(value as LiveRankMetric)}>
               <SelectTrigger aria-label="Rank channels by" className="w-[204px] gap-1.5 rounded-[10px] bg-card px-3 data-[size=default]:h-10">
                 <ArrowDownWideNarrow className="size-4 text-primary-strong" />
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {rankMetrics.map((key) => (
+                {(Object.keys(LIVE_RANK_ITEMS) as LiveRankMetric[]).map((key) => (
                   <SelectItem key={key} value={key}>
-                    {RANK_ITEMS[key]}
+                    {LIVE_RANK_ITEMS[key]}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -137,15 +137,19 @@ export default function ChannelsPage() {
         </div>
       </div>
 
-      {isLoading || !view ? (
-        <ChannelCardsSkeleton count={channel === "all" ? 5 : 6} />
-      ) : view.selected ? (
+      {totalsQuery.isPending ? (
+        <ChannelCardsSkeleton ranking={source === "all"} />
+      ) : live.stats.length === 0 ? (
+        <p className="rounded-2xl border border-border bg-card px-6 py-10 text-center text-sm text-muted-foreground">
+          {totalsQuery.error ? `Channel figures unavailable: ${totalsQuery.error.message}` : "No channel figures for this period"}
+        </p>
+      ) : selected ? (
         <div className="space-y-4">
-          <ChannelFocusGrid selected={view.selected} platform={view.platform} />
-          <RankChips ranks={view.selected.ranks} total={view.stats.length} />
+          <ChannelFocusGrid selected={selected} platform={live.platform} periodDays={countDays(period.range)} />
+          <RankChips ranks={sourceRanks(live.stats, selected.source)} total={live.stats.length} />
         </div>
       ) : (
-        <ChannelRankingGrid stats={view.stats} rankBy={rankBy} />
+        <ChannelRankingGrid stats={live.stats} rankBy={rankBy} />
       )}
 
       <DayByDayCard

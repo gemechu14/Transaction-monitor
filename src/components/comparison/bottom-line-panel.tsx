@@ -1,6 +1,6 @@
 "use client";
 
-import { Skeleton } from "@/components/ui/skeleton";
+import { ShimmerLine } from "@/components/ui/shimmer-line";
 import type { BottomLine, SideKey } from "@/lib/comparison";
 import { cn } from "@/lib/utils";
 
@@ -12,7 +12,10 @@ export function BottomLinePanel({ line, isLoading }: { line: BottomLine | null; 
     <section className="rounded-2xl bg-primary-soft px-7 py-6 max-[620px]:px-5 max-[620px]:py-5" aria-live="polite">
       <p className="text-[13px] font-semibold text-primary-strong">Bottom line</p>
       {isLoading ? (
-        <Skeleton className="mt-2 h-7 w-2/3" />
+        <div aria-busy="true">
+          <ShimmerLine className="mt-1 text-xl leading-snug font-bold max-[620px]:text-lg" barClassName="w-2/3 rounded-lg" />
+          <ShimmerLine className="mt-2 text-sm" barClassName="w-1/2" delay={100} />
+        </div>
       ) : !line ? (
         <p className="mt-1 text-xl leading-snug font-bold text-foreground max-[620px]:text-lg">
           Not enough data to compare amounts

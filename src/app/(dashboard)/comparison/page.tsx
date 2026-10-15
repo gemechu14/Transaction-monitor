@@ -17,28 +17,31 @@ import { KeyInsightsCard } from "@/components/comparison/key-insights-card";
 import { ShareOfAmountCard } from "@/components/comparison/share-of-amount-card";
 import { ExportMenu } from "@/components/reports/export-menu";
 import { buildComparisonReport, type ComparisonExportInput } from "@/components/reports/report-builders";
-import { CHANNEL_LIST, type ChannelId } from "@/config/channels";
-import { useOverviewDataset } from "@/hooks";
+import {
+  WSO2_CHANNEL_SOURCES,
+  WSO2_SOURCE_LABELS,
+  type Wso2ChannelSource,
+  type Wso2Source,
+} from "@/config/wso2-sources";
+import { useAllAdvanced } from "@/hooks";
 import {
   bottomLine,
-  buildPeriodOptions,
+  buildLivePeriodOptions,
   channelInsights,
   defaultPeriodIds,
-  figuresFor,
+  liveFigures,
+  liveSideName,
   nextOptionId,
-  periodFigures,
   periodInsights,
-  sideName,
   type ComparisonType,
   type Interval,
   type SideFigures,
   type SideKey,
 } from "@/lib/comparison";
-import { DEFAULT_PERIOD, formatRangeLabel, type OverviewPeriod } from "@/lib/overview";
+import { DEFAULT_PERIOD, countDays, formatRangeLabel, type OverviewPeriod } from "@/lib/overview";
 
-const CHANNEL_OPTIONS: FieldOption[] = CHANNEL_LIST.map((c) => ({ id: c.id, label: c.name }));
-const PLATFORM_OPTIONS: FieldOption[] = [{ id: "all", label: "All platforms" }, ...CHANNEL_OPTIONS];
-const CHANNEL_IDS = CHANNEL_LIST.map((c) => c.id);
+const CHANNEL_OPTIONS: FieldOption[] = WSO2_CHANNEL_SOURCES.map((id) => ({ id, label: WSO2_SOURCE_LABELS[id] }));
+const PLATFORM_OPTIONS: FieldOption[] = [{ id: "all", label: WSO2_SOURCE_LABELS.all }, ...CHANNEL_OPTIONS];
 
 const EMPTY_SIDE: SideFigures = { name: "", amount: null, transactions: null };
 
@@ -53,47 +56,55 @@ function pickSide<T extends string>(pair: { a: T; b: T }, side: SideKey, id: T, 
 export default function ComparisonPage() {
   const [type, setType] = useState<ComparisonType>("channels");
 
-  // Channel vs channel
-  const [channels, setChannels] = useState<{ a: ChannelId; b: ChannelId }>({ a: "telebirr", b: "mbesa_p2p" });
+  // Channel vs channel: the two largest sources by default.
+  const [channels, setChannels] = useState<{ a: Wso2ChannelSource; b: Wso2ChannelSource }>({
+    a: "ips_incoming",
+    b: "telebirrToBank",
+  });
   const [period, setPeriod] = useState<OverviewPeriod>(DEFAULT_PERIOD);
 
   // Period over period
-  const [sameChannel, setSameChannel] = useState<ChannelId | "all">("all");
+  const [sameChannel, setSameChannel] = useState<Wso2Source>("all");
   const [interval, setIntervalKind] = useState<Interval>("day");
-  // `null` means "this interval's defaults", so they can be worked out once the data has loaded.
+  // `null` means "this interval's defaults": the last two complete periods.
   const [periodIds, setPeriodIds] = useState<{ a: string; b: string } | null>(null);
 
-  const datasetQuery = useOverviewDataset();
-  const dataset = datasetQuery.data;
-  const isLoading = datasetQuery.isLoading || !dataset;
-
-  const periodOptions = useMemo(() => (dataset ? buildPeriodOptions(dataset, interval) : []), [dataset, interval]);
+  const periodOptions = useMemo(() => buildLivePeriodOptions(interval), [interval]);
   const periodIdList = periodOptions.map((o) => o.id);
   const selectedPeriods = periodIds ?? defaultPeriodIds(periodOptions);
+  const optionA = periodOptions.find((o) => o.id === selectedPeriods.a);
+  const optionB = periodOptions.find((o) => o.id === selectedPeriods.b);
+
+  // allAdvanced returns every source per call: one call covers Channel vs channel,
+  // and each side of Period over period needs its own date range.
+  const isChannels = type === "channels";
+  const rangeA = isChannels ? period.range : optionA?.range;
+  const rangeB = isChannels ? period.range : optionB?.range;
+  const queryA = useAllAdvanced({ startDate: rangeA?.from ?? "", endDate: rangeA?.to ?? "" });
+  const queryB = useAllAdvanced({ startDate: rangeB?.from ?? "", endDate: rangeB?.to ?? "" });
+  const isLoading = queryA.isPending || queryB.isPending;
+  const error = queryA.error ?? queryB.error;
 
   const result = useMemo(() => {
-    if (!dataset) return null;
+    if (isLoading) return null;
 
-    if (type === "channels") {
-      const a: SideFigures = { name: sideName(channels.a), ...figuresFor(dataset, channels.a, period.range) };
-      const b: SideFigures = { name: sideName(channels.b), ...figuresFor(dataset, channels.b, period.range) };
-      const totals = figuresFor(dataset, "all", period.range);
-      const periodDays = dataset.daily.filter((d) => d.date >= period.range.from && d.date <= period.range.to).length;
+    if (isChannels) {
+      const a: SideFigures = { name: liveSideName(channels.a), ...liveFigures(queryA.data, channels.a) };
+      const b: SideFigures = { name: liveSideName(channels.b), ...liveFigures(queryA.data, channels.b) };
+      const totals = liveFigures(queryA.data, "all");
       return {
         a,
         b,
-        insights: channelInsights(a, b, totals, periodDays),
+        insights: channelInsights(a, b, totals, countDays(period.range)),
         line: bottomLine(a, b, { periodLabel: formatRangeLabel(period.range) }),
         exportInput: { type: "channels", channels, range: period.range } satisfies ComparisonExportInput,
       };
     }
 
-    const optionA = periodOptions.find((o) => o.id === selectedPeriods.a);
-    const optionB = periodOptions.find((o) => o.id === selectedPeriods.b);
     if (!optionA || !optionB) return null;
-    const caption = sideName(sameChannel);
-    const a: SideFigures = { name: optionA.shortLabel, caption, ...periodFigures(dataset, sameChannel, optionA) };
-    const b: SideFigures = { name: optionB.shortLabel, caption, ...periodFigures(dataset, sameChannel, optionB) };
+    const caption = liveSideName(sameChannel);
+    const a: SideFigures = { name: optionA.shortLabel, caption, ...liveFigures(queryA.data, sameChannel) };
+    const b: SideFigures = { name: optionB.shortLabel, caption, ...liveFigures(queryB.data, sameChannel) };
     return {
       a,
       b,
@@ -105,7 +116,7 @@ export default function ComparisonPage() {
         periods: { a: optionA, b: optionB },
       } satisfies ComparisonExportInput,
     };
-  }, [dataset, type, channels, period.range, periodOptions, selectedPeriods.a, selectedPeriods.b, sameChannel]);
+  }, [isLoading, isChannels, channels, period.range, optionA, optionB, sameChannel, queryA.data, queryB.data]);
 
   return (
     <div className="space-y-4">
@@ -129,7 +140,7 @@ export default function ComparisonPage() {
               value={channels.a}
               options={CHANNEL_OPTIONS}
               disabledId={channels.b}
-              onChange={(id) => setChannels((pair) => pickSide(pair, "a", id as ChannelId, CHANNEL_IDS))}
+              onChange={(id) => setChannels((pair) => pickSide(pair, "a", id as Wso2ChannelSource, WSO2_CHANNEL_SOURCES))}
             />
             <SwapButton label="Swap channels" onClick={() => setChannels(({ a, b }) => ({ a: b, b: a }))} />
             <SideSelect
@@ -138,9 +149,9 @@ export default function ComparisonPage() {
               value={channels.b}
               options={CHANNEL_OPTIONS}
               disabledId={channels.a}
-              onChange={(id) => setChannels((pair) => pickSide(pair, "b", id as ChannelId, CHANNEL_IDS))}
+              onChange={(id) => setChannels((pair) => pickSide(pair, "b", id as Wso2ChannelSource, WSO2_CHANNEL_SOURCES))}
             />
-            <PeriodField value={period} onChange={setPeriod} dataFrom={dataset?.from} />
+            <PeriodField value={period} onChange={setPeriod} />
           </>
         ) : (
           <>
@@ -148,7 +159,7 @@ export default function ComparisonPage() {
               label="Channel"
               value={sameChannel}
               options={PLATFORM_OPTIONS}
-              onChange={(id) => setSameChannel(id as ChannelId | "all")}
+              onChange={(id) => setSameChannel(id as Wso2Source)}
             />
             <IntervalSwitch
               value={interval}
@@ -188,6 +199,12 @@ export default function ComparisonPage() {
           />
         </div>
       </ComparisonFilterBar>
+
+      {error && (
+        <p role="alert" className="rounded-xl border border-border bg-card px-4 py-3 text-sm text-muted-foreground">
+          Comparison figures unavailable: {error.message}
+        </p>
+      )}
 
       <HeadToHeadCard a={result?.a ?? EMPTY_SIDE} b={result?.b ?? EMPTY_SIDE} isLoading={isLoading} />
 

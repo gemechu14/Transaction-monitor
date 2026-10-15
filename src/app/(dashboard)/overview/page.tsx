@@ -3,17 +3,18 @@
 import { useMemo, useState } from "react";
 import { Layers, X } from "lucide-react";
 
-import { AnomalyFlagsCard } from "@/components/overview/anomaly-flags-card";
+// import { AnomalyFlagsCard } from "@/components/overview/anomaly-flags-card";
 import { ChannelPerformanceCard } from "@/components/overview/channel-performance-card";
-import { DailyTransactionsCard } from "@/components/overview/daily-transactions-card";
+// import { DailyTransactionsCard } from "@/components/overview/daily-transactions-card";
 import { DistributionByChannelCard } from "@/components/overview/distribution-card";
-import { LatencyCard } from "@/components/overview/latency-card";
+// import { LatencyCard } from "@/components/overview/latency-card";
 import { OverviewKpiGrid } from "@/components/overview/overview-kpi-grid";
 import { PeriodPicker } from "@/components/overview/period-picker";
 import { ExportMenu } from "@/components/reports/export-menu";
 import { buildOverviewReport } from "@/components/reports/report-builders";
-import { StatusDistributionCard } from "@/components/overview/status-distribution-card";
-import { TopFailingChannelsCard } from "@/components/overview/top-failing-channels-card";
+// import { StatusDistributionCard } from "@/components/overview/status-distribution-card";
+// import { TopFailingChannelsCard } from "@/components/overview/top-failing-channels-card";
+import { ValueMixCard } from "@/components/overview/value-mix-card";
 import {
   Select,
   SelectContent,
@@ -21,32 +22,36 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CHANNEL_LIST, type ChannelId } from "@/config/channels";
-import { useMe, useOverviewDataset } from "@/hooks";
+import type { ChannelId } from "@/config/channels";
+import { WSO2_SOURCE_LABELS, WSO2_SOURCES, type Wso2Source } from "@/config/wso2-sources";
+import { useAllAdvanced, useMe, useOverviewDataset } from "@/hooks";
 import {
   DEFAULT_PERIOD,
-  channelName,
+  LIVE_KPI_IDS,
+  applyLiveTotals,
+  // channelName, formatRangeLabel: used by the hidden daily chart
   computeOverview,
-  formatRangeLabel,
+  pickSourceTotals,
+  sourceRows,
   type OverviewPeriod,
 } from "@/lib/overview";
 
 const USER_VISIBLE_KPI_IDS = new Set(["total-value", "total-volume", "avg-value"]);
 
-const PLATFORM_ITEMS: Record<string, string> = {
-  all: "All platforms",
-  ...Object.fromEntries(CHANNEL_LIST.map((c) => [c.id, c.name])),
-};
-
 export default function OverviewPage() {
   const [period, setPeriod] = useState<OverviewPeriod>(DEFAULT_PERIOD);
-  const [channel, setChannel] = useState<ChannelId | "all">("all");
+  // `source` (the dropdown, or a click on the distribution card) drives the live
+  // WSO2 totals. The sample dataset no longer has a channel filter, so it stays on "all".
+  const [source, setSource] = useState<Wso2Source>("all");
+  const channel: ChannelId | "all" = "all";
 
   const meQuery = useMe();
   const isAdmin = meQuery.data?.user.role === "ADMIN";
 
   const datasetQuery = useOverviewDataset();
   const dataset = datasetQuery.data;
+  // One call per period returns every source, so switching source needs no refetch.
+  const totalsQuery = useAllAdvanced({ startDate: period.range.from, endDate: period.range.to });
   const isLoading = datasetQuery.isLoading || !dataset;
 
   const view = useMemo(
@@ -54,11 +59,18 @@ export default function OverviewPage() {
     [dataset, period.range, channel],
   );
 
-  const kpis = (view?.kpis ?? []).filter((kpi) => isAdmin || USER_VISIBLE_KPI_IDS.has(kpi.id));
-  const platformLabel = channel === "all" ? "All platforms" : channelName(channel);
-  const chartSubtitle = `${platformLabel}, ${formatRangeLabel(period.range)}${
-    view?.clipped ? " (data available from 1 Sep)" : ""
-  }`;
+  const kpis = applyLiveTotals(
+    (view?.kpis ?? []).filter((kpi) => isAdmin || USER_VISIBLE_KPI_IDS.has(kpi.id)),
+    pickSourceTotals(totalsQuery.data, source),
+    period.range,
+    totalsQuery.error?.message,
+  );
+  const platformLabel = WSO2_SOURCE_LABELS[source];
+  // Daily chart hidden until the backend has a per-day endpoint (see ADVANCED_API.md).
+  // const chartPlatformLabel = channel === "all" ? "All platforms" : channelName(channel);
+  // const chartSubtitle = `${chartPlatformLabel}, ${formatRangeLabel(period.range)}${
+  //   view?.clipped ? " (data available from 1 Sep)" : ""
+  // }`;
 
   return (
     <div className="space-y-4">
@@ -70,11 +82,11 @@ export default function OverviewPage() {
           <span className="inline-flex items-center gap-1.5 rounded-full bg-primary-soft py-1 pr-2 pl-2.5 text-xs font-medium text-primary-strong">
             <span className="size-1.5 shrink-0 rounded-full bg-primary" />
             {platformLabel}
-            {channel !== "all" && (
+            {source !== "all" && (
               <button
                 type="button"
-                onClick={() => setChannel("all")}
-                aria-label="Show all platforms"
+                onClick={() => setSource("all")}
+                aria-label="Show all sources"
                 className="-mr-0.5 rounded-full p-0.5 hover:bg-primary/15 focus-visible:outline-2 focus-visible:outline-primary"
               >
                 <X className="size-3" />
@@ -85,26 +97,25 @@ export default function OverviewPage() {
 
         <div className="flex flex-wrap items-center gap-2">
           <Select
-            items={PLATFORM_ITEMS}
-            value={channel}
-            onValueChange={(value) => setChannel(value as ChannelId | "all")}
+            items={WSO2_SOURCE_LABELS}
+            value={source}
+            onValueChange={(value) => setSource(value as Wso2Source)}
           >
-            <SelectTrigger aria-label="Platform" className="w-48 rounded-[10px] bg-card px-3.5 data-[size=default]:h-10">
+            <SelectTrigger aria-label="Source" className="w-48 rounded-[10px] bg-card px-3.5 data-[size=default]:h-10">
               <Layers className="size-4 text-primary-strong" />
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All platforms</SelectItem>
-              {CHANNEL_LIST.map((c) => (
-                <SelectItem key={c.id} value={c.id}>
-                  {c.name}
+              {WSO2_SOURCES.map((id) => (
+                <SelectItem key={id} value={id}>
+                  {WSO2_SOURCE_LABELS[id]}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
           <PeriodPicker value={period} onChange={setPeriod} dataFrom={dataset?.from} size="sm" />
           <ExportMenu
-            disabled={isLoading || !view}
+            disabled={isLoading || !view || totalsQuery.isPending}
             getReport={(author) =>
               dataset && view
                 ? buildOverviewReport(
@@ -120,16 +131,19 @@ export default function OverviewPage() {
       <OverviewKpiGrid
         kpis={kpis}
         isLoading={isLoading}
+        loadingIds={totalsQuery.isPending ? LIVE_KPI_IDS : undefined}
         skeletonCount={isAdmin ? 6 : USER_VISIBLE_KPI_IDS.size}
       />
 
-      <DailyTransactionsCard series={view?.series ?? []} subtitle={chartSubtitle} isLoading={isLoading} />
+      {/* Hidden until the backend has a per-day endpoint (see ADVANCED_API.md).
+      <DailyTransactionsCard series={view?.series ?? []} subtitle={chartSubtitle} isLoading={isLoading} /> */}
 
       <ChannelPerformanceCard
-        data={dataset?.channels ?? []}
-        selected={channel}
-        isLoading={isLoading}
-        restricted={!isAdmin}
+        data={sourceRows(totalsQuery.data)}
+        range={period.range}
+        selected={source}
+        isLoading={totalsQuery.isPending}
+        errorMessage={totalsQuery.error?.message}
       />
 
       {isAdmin && (
@@ -137,14 +151,23 @@ export default function OverviewPage() {
 
           <div className="grid grid-cols-1 gap-3 min-[901px]:grid-cols-2">
             <DistributionByChannelCard
-              data={dataset?.channels ?? []}
-              selected={channel}
-              onSelect={setChannel}
-              isLoading={isLoading}
+              data={sourceRows(totalsQuery.data)}
+              selected={source}
+              onSelect={setSource}
+              isLoading={totalsQuery.isPending}
+              errorMessage={totalsQuery.error?.message}
             />
-            <StatusDistributionCard data={dataset?.status} isLoading={isLoading} />
+            {/* Status card hidden: allAdvanced has no success/failed/reversed/pending figures.
+            <StatusDistributionCard data={dataset?.status} isLoading={isLoading} /> */}
+            <ValueMixCard
+              data={sourceRows(totalsQuery.data)}
+              range={period.range}
+              isLoading={totalsQuery.isPending}
+              errorMessage={totalsQuery.error?.message}
+            />
           </div>
 
+          {/* Hidden for now: latency, failing channels and anomaly flags are still sample data.
           <div className="grid grid-cols-1 gap-3 min-[901px]:grid-cols-2 min-[1181px]:grid-cols-3">
             <LatencyCard data={dataset?.channels ?? []} isLoading={isLoading} />
             <TopFailingChannelsCard data={dataset?.failing ?? []} isLoading={isLoading} />
@@ -153,7 +176,7 @@ export default function OverviewPage() {
               isLoading={isLoading}
               className="min-[901px]:max-[1180px]:col-span-2"
             />
-          </div>
+          </div> */}
         </>
       )}
     </div>

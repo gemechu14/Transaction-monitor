@@ -142,6 +142,18 @@
   --bad-soft: #fbeae6;
   --track: #eaf0f3;
   --reversed: #94a3b8;
+  --skeleton-base: #e9f6fc;
+  --skeleton-shine: rgba(255, 255, 255, 0.85);
+  --rank-text: #0f172a;
+  --rank-muted: #64748b;
+  --rank-accent: #0ea5e9;
+  --rank-accent-strong: #0284c7;
+  --rank-accent-soft: #e0f2fe;
+  --cp-track: #e8edf3;
+  --cp-card: #ffffff;
+  --cp-border: #e5e7eb;
+  --donut-others: #9bdcf7;
+  --value-mix-2: #0073a6;
 }
 
 .dark {
@@ -207,6 +219,18 @@
   --bad-soft: #3a1d24;
   --track: #1e2a43;
   --reversed: #94a3b8;
+  --skeleton-base: #14274a;
+  --skeleton-shine: rgba(120, 200, 245, 0.12);
+  --rank-text: #e5edf7;
+  --rank-muted: #94a3b8;
+  --rank-accent: #38bdf8;
+  --rank-accent-strong: #7dd3fc;
+  --rank-accent-soft: rgba(56, 189, 248, 0.14);
+  --cp-track: #1f2b40;
+  --cp-card: #111a2b;
+  --cp-border: #243049;
+  --donut-others: #2b6f96;
+  --value-mix-2: #7dd3fc;
 }
 
 /* Login page tokens (scoped so the dashboard palette is untouched) */
@@ -294,4 +318,57 @@
   html {
     @apply font-sans;
   }
+}
+/* KPI loading state: a brand-tinted bar with a soft light sweeping across it. */
+@keyframes skeleton-shimmer {
+  from {
+    background-position: 160% 0;
+  }
+  to {
+    background-position: -60% 0;
+  }
+}
+
+.skeleton-shimmer {
+  background-color: var(--skeleton-base);
+  background-image: linear-gradient(
+    100deg,
+    transparent 25%,
+    var(--skeleton-shine) 50%,
+    transparent 75%
+  );
+  background-size: 220% 100%;
+  background-repeat: no-repeat;
+  animation: skeleton-shimmer 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+/* Numbers settle in once they arrive. */
+@keyframes kpi-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.kpi-reveal {
+  animation: kpi-reveal 0.4s cubic-bezier(0.2, 0, 0, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-shimmer {
+    animation: none;
+  }
+  .kpi-reveal {
+    animation: none;
+  }
+}
+
+/* Channel performance card: Inter at 1.45 line-height. */
+.inter-ui {
+  font-family: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  line-height: 1.45;
 }

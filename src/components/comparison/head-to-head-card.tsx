@@ -1,7 +1,7 @@
 "use client";
 
 import { SIDE_DOT_CLASS } from "@/components/comparison/comparison-filter-bar";
-import { Skeleton } from "@/components/ui/skeleton";
+import { ShimmerLine } from "@/components/ui/shimmer-line";
 import {
   avgPayment,
   formatAmount,
@@ -37,24 +37,60 @@ export function HeadToHeadCard({
   return (
     <section className="rounded-2xl border border-border bg-card px-6 py-[22px] max-[620px]:p-[18px]">
       <h2 className="mb-4 text-base font-semibold text-foreground">Head-to-head</h2>
-      {isLoading ? (
-        <Skeleton className="h-56 w-full" />
-      ) : (
-        <div className="grid gap-4 min-[901px]:grid-cols-[1fr_minmax(170px,0.55fr)_1fr]">
-          <SidePanel side="a" figures={a} leads={amountGap.leader === "a"} />
-          <div className="flex flex-col justify-center gap-5 rounded-[14px] px-2 py-1 max-[900px]:flex-row max-[900px]:justify-around max-[900px]:py-0">
-            <GapRow label="Amount gap" gap={amountGap} format={formatAmount} />
-            <GapRow label="Transactions gap" gap={transactionGap} format={formatTransactions} />
-          </div>
-          <SidePanel side="b" figures={b} leads={amountGap.leader === "b"} />
+      {/* Loading keeps the real layout and swaps figures for shimmer lines, so nothing shifts. */}
+      <div className="grid gap-4 min-[901px]:grid-cols-[1fr_minmax(170px,0.55fr)_1fr]" aria-busy={isLoading || undefined}>
+        <SidePanel side="a" figures={a} leads={amountGap.leader === "a"} loading={isLoading} />
+        <div className="flex flex-col justify-center gap-5 rounded-[14px] px-2 py-1 max-[900px]:flex-row max-[900px]:justify-around max-[900px]:py-0">
+          <GapRow label="Amount gap" gap={amountGap} format={formatAmount} loading={isLoading} />
+          <GapRow label="Transactions gap" gap={transactionGap} format={formatTransactions} loading={isLoading} />
         </div>
-      )}
+        <SidePanel side="b" figures={b} leads={amountGap.leader === "b"} loading={isLoading} />
+      </div>
     </section>
   );
 }
 
-function SidePanel({ side, figures, leads }: { side: SideKey; figures: SideFigures; leads: boolean }) {
+const NAME_CLASS = "flex items-center gap-2 text-[17px] font-bold text-foreground";
+const AMOUNT_CLASS =
+  "text-[32px] leading-tight font-bold whitespace-nowrap text-foreground tabular-nums max-[1640px]:text-[28px] max-[620px]:text-2xl";
+const STAT_CLASS = "text-lg font-semibold text-foreground tabular-nums";
+
+function SidePanel({
+  side,
+  figures,
+  leads,
+  loading,
+}: {
+  side: SideKey;
+  figures: SideFigures;
+  leads: boolean;
+  loading?: boolean;
+}) {
   const avg = avgPayment(figures);
+  if (loading) {
+    return (
+      <div
+        className={cn(
+          "relative overflow-hidden rounded-[14px] border border-line-soft bg-muted px-[22px] pt-6 pb-5 before:absolute before:inset-x-0 before:top-0 before:h-1",
+          SIDE_STYLES[side].edge,
+        )}
+      >
+        <ShimmerLine className={NAME_CLASS} barClassName="w-36" />
+        <p className="mt-4 text-xs text-muted-foreground">Amount</p>
+        <ShimmerLine className={AMOUNT_CLASS} barClassName="w-[60%] max-w-52 rounded-lg" delay={80} />
+        <div className="mt-4 grid grid-cols-2 gap-4 border-t border-line-soft pt-4">
+          <div>
+            <p className="text-xs text-muted-foreground">Transactions</p>
+            <ShimmerLine className={STAT_CLASS} barClassName="w-20" delay={160} />
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Avg payment</p>
+            <ShimmerLine className={STAT_CLASS} barClassName="w-20" delay={160} />
+          </div>
+        </div>
+      </div>
+    );
+  }
   return (
     <div
       className={cn(
@@ -64,7 +100,7 @@ function SidePanel({ side, figures, leads }: { side: SideKey; figures: SideFigur
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="min-w-0">
-          <p className="flex items-center gap-2 text-[17px] font-bold text-foreground">
+          <p className={NAME_CLASS}>
             <span className={cn("size-2.5 shrink-0 rounded-full", SIDE_DOT_CLASS[side])} aria-hidden />
             <span className="truncate">{figures.name}</span>
             {/* Inline so Period over period panels keep the same layout as Channel vs channel. */}
@@ -82,20 +118,20 @@ function SidePanel({ side, figures, leads }: { side: SideKey; figures: SideFigur
       </div>
 
       <p className="mt-4 text-xs text-muted-foreground">Amount</p>
-      <p className="text-[32px] leading-tight font-bold whitespace-nowrap text-foreground tabular-nums max-[1640px]:text-[28px] max-[620px]:text-2xl">
+      <p className={AMOUNT_CLASS}>
         {figures.amount === null ? "No data" : formatAmount(figures.amount)}
       </p>
 
       <div className="mt-4 grid grid-cols-2 gap-4 border-t border-line-soft pt-4">
         <div>
           <p className="text-xs text-muted-foreground">Transactions</p>
-          <p className="text-lg font-semibold text-foreground tabular-nums">
+          <p className={STAT_CLASS}>
             {figures.transactions === null ? "—" : formatTransactions(figures.transactions)}
           </p>
         </div>
         <div>
           <p className="text-xs text-muted-foreground">Avg payment</p>
-          <p className="text-lg font-semibold text-foreground tabular-nums">
+          <p className={STAT_CLASS}>
             {avg === null ? "—" : formatAvgPayment(avg)}
           </p>
         </div>
@@ -104,8 +140,27 @@ function SidePanel({ side, figures, leads }: { side: SideKey; figures: SideFigur
   );
 }
 
-function GapRow({ label, gap, format }: { label: string; gap: Gap; format: (value: number) => string }) {
+function GapRow({
+  label,
+  gap,
+  format,
+  loading,
+}: {
+  label: string;
+  gap: Gap;
+  format: (value: number) => string;
+  loading?: boolean;
+}) {
   const ahead = gap.leader === "a" || gap.leader === "b" ? gap.leader : null;
+  if (loading) {
+    return (
+      <div className="text-center">
+        <p className="text-xs text-muted-foreground">{label}</p>
+        <ShimmerLine className="flex justify-center text-xl font-bold" barClassName="left-1/2 w-28 -translate-x-1/2" delay={120} />
+        <ShimmerLine className="flex justify-center text-xs" barClassName="left-1/2 w-16 -translate-x-1/2" delay={120} />
+      </div>
+    );
+  }
   return (
     <div className="text-center">
       <p className="text-xs text-muted-foreground">{label}</p>

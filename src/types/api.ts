@@ -1,5 +1,6 @@
 import type { ChannelId } from "@/config/channels";
 import type { TransactionStatus } from "@/config/status";
+import type { Wso2ChannelSource } from "@/config/wso2-sources";
 
 export interface PaginatedResponse<T> {
   data: T[];
@@ -248,3 +249,17 @@ export interface OverviewDataset {
   /** All-platform change vs the month before, as fractions (0.03 for +3%). */
   previousMonthChange: { value: number; transactions: number };
 }
+
+/** Query for the `allAdvanced` totals. Dates are "YYYY-MM-DD", inclusive. */
+export interface AllAdvancedParams {
+  startDate: string;
+  endDate: string;
+}
+
+export interface SourceTotals {
+  totalTransactions: number;
+  totalAmount: number;
+}
+
+/** `allAdvanced` data: one entry per WSO2 source. */
+export type AllAdvancedTotals = Partial<Record<Wso2ChannelSource, SourceTotals>>;

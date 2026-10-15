@@ -1,8 +1,18 @@
 import { CHANNELS, type ChannelId } from "@/config/channels";
+import {
+  WSO2_CHANNEL_SOURCES,
+  type Wso2ChannelSource,
+  type Wso2Source,
+} from "@/config/wso2-sources";
 import { eachDay, type DateRange } from "@/lib/date";
 import { formatCompactNumber, formatCurrencyCompact } from "@/lib/format";
 import { seededRandom } from "@/lib/mock/rng";
-import type { OverviewChannelRow, OverviewDataset } from "@/types/api";
+import type {
+  AllAdvancedTotals,
+  OverviewChannelRow,
+  OverviewDataset,
+  SourceTotals,
+} from "@/types/api";
 
 /**
  * Filter maths for the Overview page. The dataset holds one month of channel
@@ -182,16 +192,17 @@ export function computeOverview(
   const dataDays = series.length;
   const name = row ? channelName(row.channel) : "";
 
-  const statusTotal =
-    dataset.status.success + dataset.status.failed + dataset.status.reversed + dataset.status.pending;
-  const failureShare = statusTotal ? dataset.status.failed / statusTotal : 0;
-  const reversalShare = statusTotal ? dataset.status.reversed / statusTotal : 0;
-
-  const slowest = [...dataset.channels].sort((a, b) => b.avgLatencyMs - a.avgLatencyMs)[0];
-
-  const failed = dataset.status.failed * periodShare;
-  const reversed = dataset.status.reversed * periodShare;
-  const failedReversed = row ? count * (1 - row.successRate) : failed + reversed;
+  // Only used by the hidden Success rate, Failed / reversed and Average latency cards.
+  // const statusTotal =
+  //   dataset.status.success + dataset.status.failed + dataset.status.reversed + dataset.status.pending;
+  // const failureShare = statusTotal ? dataset.status.failed / statusTotal : 0;
+  // const reversalShare = statusTotal ? dataset.status.reversed / statusTotal : 0;
+  //
+  // const slowest = [...dataset.channels].sort((a, b) => b.avgLatencyMs - a.avgLatencyMs)[0];
+  //
+  // const failed = dataset.status.failed * periodShare;
+  // const reversed = dataset.status.reversed * periodShare;
+  // const failedReversed = row ? count * (1 - row.successRate) : failed + reversed;
 
   const kpis: OverviewKpi[] = [
     {
@@ -208,24 +219,25 @@ export function computeOverview(
       value: formatCompactNumber(count),
       detail: `≈ ${formatCompactNumber(dataDays ? count / dataDays : 0)} per day`,
     },
-    {
-      id: "success-rate",
-      label: "Success rate",
-      shortLabel: "Success rate",
-      value: `${(scope.successRate * 100).toFixed(2)}%`,
-      detail: row
-        ? `Failure ${((1 - row.successRate) * 100).toFixed(2)}%`
-        : `Failure ${(failureShare * 100).toFixed(2)}%, reversal ${(reversalShare * 100).toFixed(2)}%`,
-    },
-    {
-      id: "failed-reversed",
-      label: "Failed / reversed",
-      shortLabel: "Failed",
-      value: formatCompactNumber(failedReversed),
-      detail: row
-        ? `${name} failed and reversed`
-        : `${formatCompactNumber(failed)} failed, ${Math.round(reversed).toLocaleString("en-US")} reversed`,
-    },
+    // Success rate and Failed / reversed cards are hidden for now.
+    // {
+    //   id: "success-rate",
+    //   label: "Success rate",
+    //   shortLabel: "Success rate",
+    //   value: `${(scope.successRate * 100).toFixed(2)}%`,
+    //   detail: row
+    //     ? `Failure ${((1 - row.successRate) * 100).toFixed(2)}%`
+    //     : `Failure ${(failureShare * 100).toFixed(2)}%, reversal ${(reversalShare * 100).toFixed(2)}%`,
+    // },
+    // {
+    //   id: "failed-reversed",
+    //   label: "Failed / reversed",
+    //   shortLabel: "Failed",
+    //   value: formatCompactNumber(failedReversed),
+    //   detail: row
+    //     ? `${name} failed and reversed`
+    //     : `${formatCompactNumber(failed)} failed, ${Math.round(reversed).toLocaleString("en-US")} reversed`,
+    // },
     {
       id: "avg-value",
       label: "Average transaction value",
@@ -233,17 +245,18 @@ export function computeOverview(
       value: formatEtb(avgTicket),
       detail: row ? `${name} average ticket` : `Median ${formatEtb(avgTicket * 0.89)}`,
     },
-    {
-      id: "avg-latency",
-      label: "Average latency",
-      shortLabel: "Avg latency",
-      value: `${Math.round(scope.avgLatencyMs)} ms`,
-      detail: row
-        ? `${name} response time`
-        : slowest
-          ? `Slowest: ${CHANNELS[slowest.channel]?.shortName ?? slowest.channel}, ${slowest.avgLatencyMs} ms`
-          : "",
-    },
+    // Average latency card is hidden for now.
+    // {
+    //   id: "avg-latency",
+    //   label: "Average latency",
+    //   shortLabel: "Avg latency",
+    //   value: `${Math.round(scope.avgLatencyMs)} ms`,
+    //   detail: row
+    //     ? `${name} response time`
+    //     : slowest
+    //       ? `Slowest: ${CHANNELS[slowest.channel]?.shortName ?? slowest.channel}, ${slowest.avgLatencyMs} ms`
+    //       : "",
+    // },
   ];
 
   return {
@@ -262,4 +275,69 @@ export function niceAxisMax(value: number, steps = 4): number {
   const normalized = rawStep / magnitude;
   const niceStep = [1, 2, 2.5, 5, 10].find((n) => normalized <= n) ?? 10;
   return niceStep * magnitude * steps;
+}
+
+
+/** One source's totals, or every source added up for "all". */
+export function pickSourceTotals(
+  totals: AllAdvancedTotals | undefined,
+  source: Wso2Source,
+): SourceTotals | undefined {
+  if (!totals) return undefined;
+  if (source !== "all") return totals[source] ?? { totalTransactions: 0, totalAmount: 0 };
+  return Object.values(totals).reduce<SourceTotals>(
+    (acc, t) => ({
+      totalTransactions: acc.totalTransactions + (t?.totalTransactions ?? 0),
+      totalAmount: acc.totalAmount + (t?.totalAmount ?? 0),
+    }),
+    { totalTransactions: 0, totalAmount: 0 },
+  );
+}
+
+/** KPIs filled from live WSO2 totals; the rest still come from the mock dataset. */
+export const LIVE_KPI_IDS = new Set<OverviewKpi["id"]>(["total-value", "total-volume", "avg-value"]);
+
+/**
+ * Swaps the value, volume and average-ticket KPIs for live WSO2 totals. Without
+ * totals (`undefined`), those three show "—" and `errorMessage` as their detail.
+ */
+export function applyLiveTotals(
+  kpis: OverviewKpi[],
+  totals: SourceTotals | undefined,
+  range: DateRange,
+  errorMessage?: string,
+): OverviewKpi[] {
+  const unavailable = errorMessage ? `Unavailable: ${errorMessage}` : "Unavailable";
+  const count = totals?.totalTransactions ?? 0;
+  const avgTicket = count ? (totals?.totalAmount ?? 0) / count : 0;
+
+  return kpis.map((kpi) => {
+    if (!LIVE_KPI_IDS.has(kpi.id)) return kpi;
+    if (!totals) return { ...kpi, value: "—", detail: unavailable };
+    if (kpi.id === "total-value") {
+      return { ...kpi, value: formatEtb(totals.totalAmount), detail: `Avg ${formatEtb(avgTicket)} per transaction` };
+    }
+    if (kpi.id === "total-volume") {
+      return {
+        ...kpi,
+        value: formatCompactNumber(count),
+        detail: `≈ ${formatCompactNumber(count / countDays(range))} per day`,
+      };
+    }
+    return { ...kpi, value: formatEtb(avgTicket), detail: `Across ${formatCompactNumber(count)} transactions` };
+  });
+}
+
+export interface SourceRow extends SourceTotals {
+  source: Wso2ChannelSource;
+}
+
+/** Every WSO2 source as a row (missing ones as zero), for per-source rankings. */
+export function sourceRows(totals: AllAdvancedTotals | undefined): SourceRow[] {
+  if (!totals) return [];
+  return WSO2_CHANNEL_SOURCES.map((source) => ({
+    source,
+    totalTransactions: totals[source]?.totalTransactions ?? 0,
+    totalAmount: totals[source]?.totalAmount ?? 0,
+  }));
 }

@@ -2,7 +2,7 @@
 
 import { SIDE_DOT_CLASS } from "@/components/comparison/comparison-filter-bar";
 import { SectionCard } from "@/components/overview/section-card";
-import { Skeleton } from "@/components/ui/skeleton";
+import { ShimmerLine, ShimmerRing } from "@/components/ui/shimmer-line";
 import { formatAmount, shareOfAmount, type SideFigures, type SideKey } from "@/lib/comparison";
 import { cn } from "@/lib/utils";
 
@@ -27,7 +27,7 @@ export function ShareOfAmountCard({
   return (
     <SectionCard title="Share of amount" description="How the combined amount splits between the two sides">
       {isLoading ? (
-        <Skeleton className="h-56 w-full" />
+        <ShareLoading />
       ) : !share ? (
         <div className="flex h-56 items-center justify-center rounded-xl bg-muted text-sm text-muted-foreground">
           Not enough data for this comparison.
@@ -115,5 +115,31 @@ function ShareBody({
       </div>
       <p className="mt-5 border-t border-line-soft pt-4 text-sm text-foreground-2">{takeaway}</p>
     </>
+  );
+}
+
+/** Same ring, rows and takeaway line as the loaded card, so nothing shifts. */
+function ShareLoading() {
+  return (
+    <div aria-busy="true">
+      <div className="flex items-center gap-8 max-[760px]:flex-col max-[760px]:items-stretch">
+        <div className="relative shrink-0 self-center" style={{ width: SIZE, height: SIZE }}>
+          <ShimmerRing size={SIZE} radius={RADIUS} stroke={STROKE} />
+        </div>
+        <ul className="min-w-0 flex-1 space-y-4">
+          {(["a", "b"] as const).map((side, index) => (
+            <li key={side}>
+              <ShimmerLine className="text-sm font-medium" barClassName="w-32" delay={index * 100} />
+              <ShimmerLine className="text-2xl font-bold" barClassName="w-20 rounded-lg" delay={index * 100} />
+              <ShimmerLine className="text-[13px]" barClassName="w-24" delay={index * 100} />
+            </li>
+          ))}
+        </ul>
+      </div>
+      <div className="mt-5 border-t border-line-soft pt-4">
+        <ShimmerLine className="text-sm" barClassName="w-[70%]" delay={200} />
+      </div>
+      <span className="sr-only">Loading share of amount</span>
+    </div>
   );
 }

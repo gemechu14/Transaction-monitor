@@ -1,4 +1,5 @@
 import type {
+  AllAdvancedParams,
   AnomalyParams,
   ChannelDailyFlowParams,
   ChannelSummaryParams,
@@ -27,4 +28,6 @@ export const queryKeys = {
   overviewDataset: () => ["overview-dataset"] as const,
   periodSnapshot: (params: PeriodSnapshotParams = {}) =>
     ["period-snapshot", params] as const,
+  allAdvanced: (params: AllAdvancedParams) =>
+    ["all-advanced", params] as const,
 };
