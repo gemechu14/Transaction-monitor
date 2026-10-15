@@ -36,7 +36,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { NEUTRAL_BORDER, NEUTRAL_TEXT } from "@/config/colors";
 import { formatDateLabel, formatHourLabel } from "@/lib/date";
-import { formatCompactNumber, formatCurrencyCompact } from "@/lib/format";
+import { formatNumber, formatCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { TransactionTrendPoint } from "@/types/api";
 
@@ -94,7 +94,7 @@ export function FlowChartCard({
   );
 
   const formatValue = (value: number) =>
-    metric === "count" ? formatCompactNumber(value) : formatCurrencyCompact(value);
+    metric === "count" ? formatNumber(value) : formatCurrency(value);
 
   return (
     <Card>

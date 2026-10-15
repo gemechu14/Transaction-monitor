@@ -570,10 +570,5 @@ function change(current: number, previous: number): number {
 }
 
 function formatK(value: number): string {
-  if (Math.abs(value) >= 1000) {
-    return new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 }).format(
-      value,
-    );
-  }
-  return value.toFixed(0);
+  return Math.round(value).toLocaleString("en-US");
 }

@@ -1,7 +1,7 @@
 import type { ChannelId } from "@/config/channels";
 import { WSO2_SOURCE_LABELS, type Wso2Source } from "@/config/wso2-sources";
 import { addDays, toISODate, type DateRange } from "@/lib/date";
-import { formatCompactNumber } from "@/lib/format";
+import { formatCurrency, formatNumber } from "@/lib/format";
 import { channelName, computeOverview, formatShortDate, pickSourceTotals } from "@/lib/overview";
 import type { AllAdvancedTotals, OverviewDataset } from "@/types/api";
 
@@ -145,19 +145,19 @@ export function periodFigures(
 
 /* ---------- formatting ---------- */
 
-/** "ETB 280.12M" */
+/** "ETB 280,123,456.78" */
 export function formatAmount(value: number): string {
-  return `ETB ${formatCompactNumber(value, 2)}`;
+  return formatCurrency(value);
 }
 
-/** "ETB 1.5K", or "ETB 963" under a thousand. */
+/** "ETB 1,523.40" */
 export function formatAvgPayment(value: number): string {
-  return value < 1000 ? `ETB ${Math.round(value)}` : `ETB ${formatCompactNumber(value, 1)}`;
+  return formatCurrency(value);
 }
 
-/** "191.2K", or a whole number under a thousand (daily counts are fractional after normalising). */
+/** "191,234": a whole number (daily counts are fractional after normalising). */
 export function formatTransactions(value: number): string {
-  return value < 1000 ? Math.round(value).toLocaleString("en-US") : formatCompactNumber(value, 1);
+  return formatNumber(value);
 }
 
 export function avgPayment(side: Pick<SideFigures, "amount" | "transactions">): number | null {
@@ -272,7 +272,7 @@ export function periodInsights(a: SideFigures, b: SideFigures): Insight[] {
     title: "Average payment size",
     text:
       avgA !== null && avgB !== null
-        ? `${a.name} averages ${formatAvgPayment(avgA)} per payment, against ${formatAvgPayment(avgB)} for ${b.name}.`
+        ? `The average payment was ${formatAvgPayment(avgA)} for ${a.name} and ${formatAvgPayment(avgB)} for ${b.name}.`
         : `${missingName(a, b, "transactions")} transaction counts aren't available, so average payments can't be compared.`,
   });
 
@@ -285,25 +285,24 @@ function missingName(a: SideFigures, b: SideFigures, key: "amount" | "transactio
   return a[key] === null ? a.name : b.name;
 }
 
-function direction(change: number): string {
-  return change >= 0 ? "up" : "down";
-}
-
 function movementText(a: SideFigures, b: SideFigures): string {
   if (a.amount === null || b.amount === null || !a.amount) {
     return `There's no ${missingName(a, b, "amount")} amount to measure the change against.`;
   }
   const amountChange = b.amount / a.amount - 1;
+  const valueText = `${pct(amountChange)} ${amountChange >= 0 ? "more" : "less"} value`;
   if (a.transactions === null || b.transactions === null || !a.transactions) {
-    return `The amount went ${direction(amountChange)} ${pct(amountChange)}. Transaction counts for ${missingName(a, b, "transactions")} aren't available, so the count change can't be shown.`;
+    return `${b.name} had ${valueText} than ${a.name}. Transaction counts for ${missingName(a, b, "transactions")} aren't available.`;
   }
   const txChange = b.transactions / a.transactions - 1;
+  const txText = `${pct(txChange)} ${txChange >= 0 ? "more" : "fewer"} transactions`;
   const avgChange = (1 + amountChange) / (1 + txChange) - 1;
+  // "but" when the average payment moved against the value, "and" when with it.
   const avgText =
     Math.abs(avgChange) < 0.005
-      ? "The average payment stayed about the same."
-      : `The average payment also got ${avgChange > 0 ? "larger" : "smaller"} (${avgChange > 0 ? "+" : "−"}${pct(avgChange)}).`;
-  return `The amount went ${direction(amountChange)} ${pct(amountChange)} and transactions ${direction(txChange)} ${pct(txChange)}. ${avgText}`;
+      ? ", and the average payment stayed about the same"
+      : `, ${avgChange > 0 === amountChange >= 0 ? "and" : "but"} each payment was ${pct(avgChange)} ${avgChange > 0 ? "larger" : "smaller"} on average`;
+  return `${b.name} had ${valueText} and ${txText} than ${a.name}${avgText}.`;
 }
 
 function gapToClosePeriods(a: SideFigures, b: SideFigures): string {
@@ -311,9 +310,9 @@ function gapToClosePeriods(a: SideFigures, b: SideFigures): string {
     return `${missingName(a, b, "amount")} has no amount yet, so there's no gap to measure.`;
   }
   const diff = b.amount - a.amount;
-  if (diff === 0) return `${b.name} matched ${a.name} exactly. There's no gap to close.`;
-  if (diff < 0) return `${b.name} would need ${formatAmount(-diff)} more to get back to ${a.name}'s level.`;
-  return `${b.name} is already ${formatAmount(diff)} ahead. Keeping that pace is the target.`;
+  if (diff === 0) return `${b.name} brought in exactly the same amount as ${a.name}.`;
+  if (diff < 0) return `${b.name} brought in ${formatAmount(-diff)} less than ${a.name}.`;
+  return `${b.name} brought in ${formatAmount(diff)} more than ${a.name}.`;
 }
 
 /* ---------- share + bottom line ---------- */

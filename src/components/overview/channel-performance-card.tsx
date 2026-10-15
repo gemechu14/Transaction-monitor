@@ -18,7 +18,7 @@ import {
   type Wso2Source,
 } from "@/config/wso2-sources";
 import type { DateRange } from "@/lib/date";
-import { formatCompactNumber } from "@/lib/format";
+import { formatNumber } from "@/lib/format";
 import { formatEtb, type SourceRow } from "@/lib/overview";
 import { cn } from "@/lib/utils";
 import type { SourceTotals } from "@/types/api";
@@ -61,7 +61,7 @@ function formatMetric(value: number, metric: Metric): string {
     case "avgTicket":
       return formatEtb(value);
     case "volume":
-      return formatCompactNumber(value);
+      return formatNumber(value);
   }
 }
 
@@ -296,7 +296,7 @@ export function ChannelPerformanceCard({
             })}
             <div className="col-start-2 flex justify-between text-[11px] text-(--rank-muted) tabular-nums">
               {ticks.map((tick) => (
-                <span key={tick}>{formatCompactNumber(tick)}</span>
+                <span key={tick}>{formatNumber(tick)}</span>
               ))}
             </div>
           </div>
@@ -329,7 +329,10 @@ export function ChannelPerformanceCard({
                       {WSO2_SOURCE_LABELS[row.source]}
                     </p>
                     <p className="truncate text-[12px] text-(--rank-muted) tabular-nums">
-                      {formatCompactNumber(row.totalTransactions)} txns, {formatEtb(row.totalAmount)}
+                      {/* The figure not already shown on the right, so full-length numbers fit. */}
+                      {metric === "volume"
+                        ? formatEtb(row.totalAmount)
+                        : `${formatNumber(row.totalTransactions)} txns`}
                     </p>
                   </div>
                   <div className="text-right tabular-nums">

@@ -21,15 +21,14 @@ import {
   type SideKey,
 } from "@/lib/comparison";
 import type { DateRange } from "@/lib/date";
-import { formatCompactNumber } from "@/lib/format";
+import { formatNumber } from "@/lib/format";
 import {
-  channelName,
   formatEtb,
   formatFullRangeLabel,
   formatLongDate,
   formatRangeLabel,
   type OverviewKpi,
-  type OverviewView,
+  type SourceRow,
 } from "@/lib/overview";
 import type { OverviewDataset } from "@/types/api";
 
@@ -53,93 +52,78 @@ export interface ExportRequest {
   fileBase: string;
 }
 
-const RESTRICTED_NOTE =
-  "Operational metrics (success and failure rates, latency, status distribution, failing channels and anomaly flags) are restricted to administrators and are not included in this report.";
-
 function clippedNote(dataset: OverviewDataset, range: DateRange): string[] {
   return range.from < dataset.from
     ? [`Data is available from ${formatLongDate(dataset.from)}; earlier days in the reporting period are not included.`]
     : [];
 }
 
-function indexOrUndefined(index: number): number | undefined {
-  return index >= 0 ? index : undefined;
+/** Indexes of the items matching `test`, for `highlightRows`. */
+function indexesOf<T>(items: T[], test: (item: T) => boolean): number[] {
+  return items.flatMap((item, i) => (test(item) ? [i] : []));
 }
 
 /* ---------- Overview ---------- */
 
+/** What the Overview export leaves out, and why. */
+const OVERVIEW_LIVE_NOTE =
+  "Figures are live totals from WSO2 for the reporting period. Success and failure rates, latency, transaction status and daily figures are not included because the API does not provide them yet.";
+
+/** Only figures that came from the live API: the totals KPIs and the per-source table. */
 export function buildOverviewReport(
   input: {
-    dataset: OverviewDataset;
-    view: OverviewView;
-    /** Already filtered to what the viewer's role may see. */
+    /** Every WSO2 source's totals for the period. */
+    rows: SourceRow[];
+    /** The live KPIs (total value, volume, average transaction value), as shown on screen. */
     kpis: OverviewKpi[];
-    channel: ChannelId | "all";
-    platformLabel: string;
+    source: Wso2Source;
+    sourceLabel: string;
     range: DateRange;
-    isAdmin: boolean;
   },
   author: ReportAuthor,
 ): ExportRequest {
-  const { dataset, view, kpis, channel, platformLabel, range, isAdmin } = input;
-  const channels = [...dataset.channels].sort((a, b) => b.totalValue - a.totalValue);
-  const totalCount = channels.reduce((acc, c) => acc + c.transactionCount, 0);
-
-  const daily: ReportTable = {
-    title: "Daily transactions",
-    note: platformLabel,
-    pdf: false,
-    columns: [
-      { header: "Date", kind: "text" },
-      { header: "Transactions", kind: "count" },
-      { header: "Value (ETB)", kind: "etb" },
-      { header: "Avg ticket (ETB)", kind: "etbRound" },
-    ],
-    rows: view.series.map((d) => [d.date, d.count, d.value, d.count ? d.value / d.count : 0]),
-  };
+  const { rows, kpis, source, sourceLabel, range } = input;
+  const sorted = [...rows].sort((a, b) => b.totalAmount - a.totalAmount);
+  const totalCount = sorted.reduce((acc, r) => acc + r.totalTransactions, 0);
+  const totalValue = sorted.reduce((acc, r) => acc + r.totalAmount, 0);
 
   const performance: ReportTable = {
     title: "Channel performance",
-    note: "Base month figures per channel",
+    note: "Live totals per source, ranked by value",
     pdf: true,
     columns: [
-      { header: "Channel", kind: "text", width: 1.6 },
+      { header: "Source", kind: "text", width: 1.6 },
       { header: "Transactions", kind: "count" },
       { header: "Value (ETB)", kind: "etb" },
       { header: "Avg ticket (ETB)", kind: "etbRound" },
-      { header: "Share", kind: "percent" },
-      ...(isAdmin
-        ? ([
-            { header: "Success rate", kind: "percent" },
-            { header: "Avg latency (ms)", kind: "ms" },
-          ] as const)
-        : []),
+      { header: "Share of transactions", kind: "percent" },
+      { header: "Share of value", kind: "percent" },
     ],
-    rows: channels.map((c) => [
-      channelName(c.channel),
-      c.transactionCount,
-      c.totalValue,
-      c.transactionCount ? c.totalValue / c.transactionCount : 0,
-      totalCount ? c.transactionCount / totalCount : 0,
-      ...(isAdmin ? [c.successRate, Math.round(c.avgLatencyMs)] : []),
+    rows: sorted.map((r) => [
+      WSO2_SOURCE_LABELS[r.source],
+      r.totalTransactions,
+      r.totalAmount,
+      r.totalTransactions ? r.totalAmount / r.totalTransactions : 0,
+      totalCount ? r.totalTransactions / totalCount : 0,
+      totalValue ? r.totalAmount / totalValue : 0,
     ]),
-    highlightRow: channel === "all" ? undefined : indexOrUndefined(channels.findIndex((c) => c.channel === channel)),
+    highlightRows: source === "all" ? undefined : indexesOf(sorted, (r) => r.source === source),
   };
 
   return {
-    fileBase: `overview-${fileSlug(channel)}-${range.from}-${range.to}`,
+    fileBase: `overview-${fileSlug(source)}-${range.from}-${range.to}`,
     spec: {
       code: "OVERVIEW",
       eyebrow: "Overview report",
       title: "Transaction monitoring overview",
       reportName: "Transaction monitoring overview",
       periodLabel: formatFullRangeLabel(range),
-      scope: `${platformLabel} · ${formatRangeLabel(range)}`,
+      scope: `${sourceLabel} · ${formatRangeLabel(range)}`,
       orientation: "portrait",
       keyFigures: kpis.map((k) => ({ label: k.label, value: k.value, detail: k.detail })),
       takeaways: [],
-      tables: [daily, performance],
-      notes: [...clippedNote(dataset, range), ...(isAdmin ? [] : [RESTRICTED_NOTE])],
+      tables: [performance],
+      notes: [OVERVIEW_LIVE_NOTE],
       ...author,
     },
   };
@@ -178,7 +162,7 @@ export function buildChannelsReport(
       { header: "Share", kind: "percent" },
     ],
     rows: ranked.map((s) => [s.name, s.count, s.value, s.successRate, Math.round(s.avgLatencyMs), s.avgTicket, s.share]),
-    highlightRow: channel === "all" ? undefined : indexOrUndefined(ranked.findIndex((s) => s.channel === channel)),
+    highlightRows: channel === "all" ? undefined : indexesOf(ranked, (s) => s.channel === channel),
   };
 
   const days: ReportTable = {
@@ -211,8 +195,8 @@ export function buildChannelsReport(
         ? [
             {
               label: "Transactions",
-              value: formatCompactNumber(selected.count),
-              detail: `~ ${formatCompactNumber(selected.perDay)} per day, rank ${selected.ranks.transactions} of ${view.stats.length}`,
+              value: formatNumber(selected.count),
+              detail: `~ ${formatNumber(selected.perDay)} per day, rank ${selected.ranks.transactions} of ${view.stats.length}`,
             },
             {
               label: "Transaction value",
@@ -418,8 +402,8 @@ export function buildDayByDayReport(
       keyFigures: [
         {
           label: "Total transactions",
-          value: formatCompactNumber(count),
-          detail: `~ ${formatCompactNumber(rows.length ? count / rows.length : 0)} per ${unit}`,
+          value: formatNumber(count),
+          detail: `~ ${formatNumber(rows.length ? count / rows.length : 0)} per ${unit}`,
         },
         {
           label: "Total value",

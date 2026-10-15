@@ -38,10 +38,19 @@ export interface DateRange {
   to: string;
 }
 
+/**
+ * "YYYY-MM-DD" as local midnight. `new Date("YYYY-MM-DD")` is UTC midnight,
+ * which lands on the previous day in time zones behind UTC.
+ */
+export function parseISODate(iso: string): Date {
+  const [year, month, day] = iso.split("-").map(Number);
+  return new Date(year, month - 1, day);
+}
+
 export function eachDay(from: string, to: string): string[] {
   const days: string[] = [];
-  let cursor = new Date(from);
-  const last = new Date(to);
+  let cursor = parseISODate(from);
+  const last = parseISODate(to);
   while (cursor <= last) {
     days.push(toISODate(cursor));
     cursor = addDays(cursor, 1);
@@ -52,7 +61,7 @@ export function eachDay(from: string, to: string): string[] {
 /** The immediately preceding period of the same length, for period-over-period comparisons. */
 export function shiftRangeBack(range: DateRange): DateRange {
   const days = eachDay(range.from, range.to).length;
-  const to = addDays(new Date(range.from), -1);
+  const to = addDays(parseISODate(range.from), -1);
   const from = addDays(to, -(days - 1));
   return { from: toISODate(from), to: toISODate(to) };
 }

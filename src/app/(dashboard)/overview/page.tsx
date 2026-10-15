@@ -22,24 +22,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { usePeriod } from "@/components/providers/period-provider";
 import type { ChannelId } from "@/config/channels";
 import { WSO2_SOURCE_LABELS, WSO2_SOURCES, type Wso2Source } from "@/config/wso2-sources";
 import { useAllAdvanced, useMe, useOverviewDataset } from "@/hooks";
 import {
-  DEFAULT_PERIOD,
   LIVE_KPI_IDS,
   applyLiveTotals,
   // channelName, formatRangeLabel: used by the hidden daily chart
   computeOverview,
   pickSourceTotals,
   sourceRows,
-  type OverviewPeriod,
 } from "@/lib/overview";
 
 const USER_VISIBLE_KPI_IDS = new Set(["total-value", "total-volume", "avg-value"]);
 
 export default function OverviewPage() {
-  const [period, setPeriod] = useState<OverviewPeriod>(DEFAULT_PERIOD);
+  // Shared across pages; kept until the user picks another period.
+  const { period, setPeriod } = usePeriod();
   // `source` (the dropdown, or a click on the distribution card) drives the live
   // WSO2 totals. The sample dataset no longer has a channel filter, so it stays on "all".
   const [source, setSource] = useState<Wso2Source>("all");
@@ -115,11 +115,18 @@ export default function OverviewPage() {
           </Select>
           <PeriodPicker value={period} onChange={setPeriod} dataFrom={dataset?.from} size="sm" />
           <ExportMenu
-            disabled={isLoading || !view || totalsQuery.isPending}
+            // The export holds only live API figures, so it waits for (and needs) the totals.
+            disabled={!totalsQuery.data}
             getReport={(author) =>
-              dataset && view
+              totalsQuery.data
                 ? buildOverviewReport(
-                    { dataset, view, kpis, channel, platformLabel, range: period.range, isAdmin },
+                    {
+                      rows: sourceRows(totalsQuery.data),
+                      kpis: kpis.filter((kpi) => LIVE_KPI_IDS.has(kpi.id)),
+                      source,
+                      sourceLabel: platformLabel,
+                      range: period.range,
+                    },
                     author,
                   )
                 : undefined

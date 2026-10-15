@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
-import { EllipsisVertical, Loader2, Pencil, Power, Search, ShieldCheck, UserPlus } from "lucide-react";
+import { EllipsisVertical, Loader2, Pencil, Power, Search, ShieldCheck, Trash2, UserPlus } from "lucide-react";
 
 import {
   Dialog,
@@ -28,7 +28,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useAdminUsers, useCreateUser, useMe, useUpdateUser } from "@/hooks";
+import { useAdminUsers, useCreateUser, useDeleteUser, useMe, useUpdateUser } from "@/hooks";
 import { AuthApiError } from "@/lib/api/auth-client";
 import { cn } from "@/lib/utils";
 import type { AdminUser, UserRole, UserStatus } from "@/types/auth";
@@ -236,21 +236,45 @@ function AddUserDialog({ onCreated }: { onCreated: () => void }) {
 
 function EditUserDialog({
   user,
+  isSelf,
   open,
   onOpenChange,
 }: {
   user: AdminUser;
+  isSelf: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  const [email, setEmail] = useState(user.email);
   const [role, setRole] = useState<UserRole>(user.role);
+  const [error, setError] = useState<string | null>(null);
   // const [status, setStatus] = useState<UserStatus>(user.status); // status now only changes via the confirmed Enable/Disable action
   const updateUserMutation = useUpdateUser();
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    await updateUserMutation.mutateAsync({ id: user.id, payload: { role } });
-    onOpenChange(false);
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail) {
+      setError("Enter the user's email address.");
+      return;
+    }
+    setError(null);
+    const emailChanged = trimmedEmail.toLowerCase() !== user.email.toLowerCase();
+    try {
+      await updateUserMutation.mutateAsync({
+        id: user.id,
+        payload: emailChanged ? { email: trimmedEmail, role } : { role },
+      });
+      onOpenChange(false);
+    } catch (err) {
+      if (err instanceof AuthApiError && err.status === 409) {
+        setError("Another user already has this email.");
+      } else if (err instanceof AuthApiError) {
+        setError(err.message);
+      } else {
+        setError("Something went wrong. Please try again.");
+      }
+    }
   }
 
   return (
@@ -259,7 +283,9 @@ function EditUserDialog({
       onOpenChange={(next) => {
         onOpenChange(next);
         if (next) {
+          setEmail(user.email);
           setRole(user.role);
+          setError(null);
           // setStatus(user.status);
         }
       }}
@@ -272,12 +298,40 @@ function EditUserDialog({
           <div className="space-y-1">
             <DialogTitle className="text-base font-semibold">Edit user</DialogTitle>
             <DialogDescription className="text-[13px]">
-              Update {user.displayName ?? user.email}&apos;s role and access.
+              Update {user.displayName ?? user.email}&apos;s email and role.
             </DialogDescription>
           </div>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-5 px-6" noValidate>
+          <div className="space-y-1.5">
+            <label htmlFor={`edit-email-${user.id}`} className="text-[13px] font-medium text-foreground-2">
+              Work email
+            </label>
+            <input
+              id={`edit-email-${user.id}`}
+              type="email"
+              autoComplete="off"
+              disabled={isSelf}
+              aria-invalid={!!error}
+              aria-describedby={error ? `edit-error-${user.id}` : undefined}
+              className={cn(
+                CONTROL,
+                "w-full px-3 disabled:cursor-not-allowed disabled:opacity-60",
+                error && "border-bad hover:border-bad",
+              )}
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+            />
+            {/* Sign-in matches the AD email against this registry, so changing your own would lock you out. */}
+            {isSelf && <p className="text-xs text-muted-foreground">You can&apos;t change your own email.</p>}
+            {error && (
+              <p id={`edit-error-${user.id}`} role="alert" className="text-[13px] font-medium text-bad">
+                {error}
+              </p>
+            )}
+          </div>
+
           <div className="space-y-1.5">
             <p className="text-[13px] font-medium text-foreground-2">Role</p>
             <RoleCards name={`edit-role-${user.id}`} value={role} onChange={setRole} />
@@ -372,6 +426,73 @@ function ToggleStatusDialog({
   );
 }
 
+function DeleteUserDialog({
+  user,
+  open,
+  onOpenChange,
+}: {
+  user: AdminUser;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const [error, setError] = useState<string | null>(null);
+  const deleteUserMutation = useDeleteUser();
+  const name = user.displayName ?? user.email;
+
+  async function handleConfirm() {
+    setError(null);
+    try {
+      await deleteUserMutation.mutateAsync(user.id);
+      onOpenChange(false);
+    } catch (err) {
+      setError(err instanceof AuthApiError ? err.message : "Something went wrong. Please try again.");
+    }
+  }
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        onOpenChange(next);
+        if (next) setError(null);
+      }}
+    >
+      <DialogContent className="max-w-[420px] rounded-2xl ring-border">
+        <DialogHeader className="flex-row items-start gap-3 p-6 pb-0">
+          <DialogIcon tone="bad">
+            <Trash2 className="size-4" />
+          </DialogIcon>
+          <div className="space-y-1">
+            <DialogTitle className="text-base font-semibold">Delete {name}?</DialogTitle>
+            <DialogDescription className="text-[13px]">
+              {name} will be removed from the workspace and can no longer sign in. To keep the record, disable
+              access instead.
+            </DialogDescription>
+            {error && (
+              <p role="alert" className="pt-1 text-[13px] font-medium text-bad">
+                {error}
+              </p>
+            )}
+          </div>
+        </DialogHeader>
+
+        <DialogFooter className="mt-1 border-t border-line-soft px-6 pt-4 pb-5">
+          <DialogClose render={<button type="button" className={OUTLINE_BUTTON} />}>Cancel</DialogClose>
+          <button
+            type="button"
+            className={DANGER_BUTTON}
+            disabled={deleteUserMutation.isPending}
+            onClick={handleConfirm}
+          >
+            {deleteUserMutation.isPending && <Loader2 className="size-4 animate-spin" />}
+            Delete user
+          </button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function UserRowActions({
   user,
   isPending,
@@ -385,6 +506,7 @@ function UserRowActions({
 }) {
   const [editOpen, setEditOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   return (
     <>
@@ -404,7 +526,7 @@ function UserRowActions({
         <DropdownMenuContent align="end" className="w-[210px] rounded-xl p-1.5">
           <DropdownMenuItem className="gap-2 rounded-lg px-2.5 py-2" onClick={() => setEditOpen(true)}>
             <Pencil className="size-3.5" />
-            Edit role
+            Edit user
           </DropdownMenuItem>
           <DropdownMenuItem
             variant={user.status === "ACTIVE" ? "destructive" : "default"}
@@ -415,16 +537,29 @@ function UserRowActions({
             <Power className="size-3.5" />
             {user.status === "ACTIVE" ? "Disable access" : "Enable access"}
           </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            variant="destructive"
+            disabled={isSelf}
+            className="gap-2 rounded-lg px-2.5 py-2"
+            onClick={() => setDeleteOpen(true)}
+          >
+            <Trash2 className="size-3.5" />
+            Delete user
+          </DropdownMenuItem>
           {isSelf && (
             <>
               <DropdownMenuSeparator />
-              <p className="px-2.5 py-1.5 text-xs text-muted-foreground">You can&apos;t disable your own access.</p>
+              <p className="px-2.5 py-1.5 text-xs text-muted-foreground">
+                You can&apos;t disable or delete your own account.
+              </p>
             </>
           )}
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <EditUserDialog user={user} open={editOpen} onOpenChange={setEditOpen} />
+      <EditUserDialog user={user} isSelf={isSelf} open={editOpen} onOpenChange={setEditOpen} />
+      <DeleteUserDialog user={user} open={deleteOpen} onOpenChange={setDeleteOpen} />
       <ToggleStatusDialog
         user={user}
         open={confirmOpen}

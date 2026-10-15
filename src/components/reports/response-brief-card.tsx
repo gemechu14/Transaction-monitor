@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatCompactNumber, formatPercent } from "@/lib/format";
+import { formatNumber, formatPercent } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 export interface ResponseBrief {
@@ -40,7 +40,7 @@ export function ResponseBriefCard({
               <div className="flex items-center justify-between">
                 <dt className="text-muted-foreground">Transactions observed</dt>
                 <dd className="font-medium text-foreground">
-                  {formatCompactNumber(brief.transactionsObserved)}
+                  {formatNumber(brief.transactionsObserved)}
                 </dd>
               </div>
               <div className="flex items-center justify-between">

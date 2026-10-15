@@ -3,13 +3,14 @@
 import type { OverviewKpi } from "@/lib/overview";
 
 const CARD_CLASS =
-  "row-span-3 grid grid-rows-subgrid gap-y-1.5 rounded-2xl border border-border bg-card px-[22px] pt-5 pb-[22px] max-[620px]:p-[18px]";
+  "@container min-w-0 row-span-3 grid grid-rows-subgrid gap-y-1.5 rounded-2xl border border-border bg-card px-[22px] pt-5 pb-[22px] max-[620px]:p-[18px]";
 
 const LABEL_CLASS = "text-base font-semibold text-foreground max-[1640px]:hidden";
 const SHORT_LABEL_CLASS =
   "hidden font-semibold text-foreground max-[1640px]:block max-[1640px]:text-sm max-[620px]:text-[13px]";
+// Full numbers are long ("ETB 2,232,593,350.43"), so the size follows the card width (up to 32px) and always fits.
 const VALUE_CLASS =
-  "text-[32px] leading-tight font-bold whitespace-nowrap text-primary-display tabular-nums max-[1640px]:text-[28px] max-[620px]:text-2xl";
+  "text-[length:min(32px,8cqi)] leading-tight font-bold whitespace-nowrap text-primary-display tabular-nums";
 const DETAIL_CLASS = "text-[15px] text-muted-foreground tabular-nums max-[620px]:text-[13px]";
 
 function KpiLabel({ kpi }: { kpi: Pick<OverviewKpi, "label" | "shortLabel"> }) {

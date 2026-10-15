@@ -11,7 +11,8 @@ import { cn } from "@/lib/utils";
 const PERIOD_PRESETS: { label: string; days: number }[] = [
   { label: "Today", days: 1 },
   { label: "Last 7 days", days: 7 },
-  { label: "Last 4 weeks", days: 28 },
+  // Hidden for now.
+  // { label: "Last 4 weeks", days: 28 },
   { label: "This month (30d)", days: 30 },
   { label: "Quarterly (3 months)", days: 90 },
   { label: "6 Months", days: 180 },

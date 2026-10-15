@@ -31,7 +31,15 @@ export const WSO2_SOURCE_LABELS: Record<Wso2Source, string> = {
   terapayOtherBank: "Terapay Other Bank",
 };
 
-export const WSO2_SOURCES = Object.keys(WSO2_SOURCE_LABELS) as Wso2Source[];
+/**
+ * Sources left out of the dashboard for now: not in any dropdown, table or
+ * export, and not added into "All sources". Remove an id to bring it back.
+ */
+const HIDDEN_SOURCES: Wso2Source[] = ["tas"];
+
+export const WSO2_SOURCES = (Object.keys(WSO2_SOURCE_LABELS) as Wso2Source[]).filter(
+  (id) => !HIDDEN_SOURCES.includes(id),
+);
 
 export const WSO2_CHANNEL_SOURCES = WSO2_SOURCES.filter(
   (id): id is Wso2ChannelSource => id !== "all",

@@ -1,23 +1,33 @@
 import type { Kpi } from "@/types/api";
 
-export function formatCompactNumber(value: number, fractionDigits = 1): string {
-  return new Intl.NumberFormat("en-US", {
-    notation: "compact",
-    maximumFractionDigits: fractionDigits,
-  }).format(value);
-}
+// Figures are always written in full ("2,232,593,350.43", "39,188"), never
+// abbreviated to K, M or B, on screen and in every export.
 
-export function formatCurrencyCompact(value: number, currency = "ETB", fractionDigits = 1): string {
-  return `${currency} ${formatCompactNumber(value, fractionDigits)}`;
-}
+const wholeNumberFormatter = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 });
 
-const fullNumberFormatter = new Intl.NumberFormat("en-US", {
+const amountFormatter = new Intl.NumberFormat("en-US", {
   minimumFractionDigits: 2,
   maximumFractionDigits: 2,
 });
 
+/** Counts and other whole numbers: "39,188". */
+export function formatNumber(value: number): string {
+  return wholeNumberFormatter.format(value);
+}
+
+/** Bare amount with two decimals: "2,232,593,350.43". */
+export function formatAmountValue(value: number): string {
+  return amountFormatter.format(value);
+}
+
+/** Amount with its currency: "ETB 2,232,593,350.43". */
+export function formatCurrency(value: number, currency = "ETB"): string {
+  return `${currency} ${amountFormatter.format(value)}`;
+}
+
+/** Same as `formatCurrency`; kept for existing callers. */
 export function formatCurrencyFull(value: number, currency = "ETB"): string {
-  return `${currency} ${fullNumberFormatter.format(value)}`;
+  return formatCurrency(value, currency);
 }
 
 export function formatPercent(fraction: number, fractionDigits = 2): string {
@@ -32,11 +42,11 @@ export function formatSignedPercent(fraction: number, fractionDigits = 1): strin
 export function formatKpiValue(kpi: Pick<Kpi, "value" | "format" | "unit">): string {
   switch (kpi.format) {
     case "currency":
-      return formatCurrencyCompact(kpi.value, kpi.unit);
+      return formatCurrency(kpi.value, kpi.unit);
     case "percent":
       return formatPercent(kpi.value);
     case "number":
     default:
-      return formatCompactNumber(kpi.value);
+      return formatNumber(kpi.value);
   }
 }

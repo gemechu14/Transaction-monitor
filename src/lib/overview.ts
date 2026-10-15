@@ -4,8 +4,8 @@ import {
   type Wso2ChannelSource,
   type Wso2Source,
 } from "@/config/wso2-sources";
-import { eachDay, type DateRange } from "@/lib/date";
-import { formatCompactNumber, formatCurrencyCompact } from "@/lib/format";
+import { addDays, eachDay, toISODate, type DateRange } from "@/lib/date";
+import { formatAmountValue, formatNumber, formatCurrency } from "@/lib/format";
 import { seededRandom } from "@/lib/mock/rng";
 import type {
   AllAdvancedTotals,
@@ -20,8 +20,10 @@ import type {
  * scale them as described in the Overview spec.
  */
 
-/** Last day with data. Presets count back from here rather than from the real clock. */
-export const OVERVIEW_TODAY = "2026-09-30";
+/** Today on the viewer's clock, "YYYY-MM-DD". Presets and the date fields end here. */
+export function todayIso(): string {
+  return toISODate(new Date());
+}
 
 const SHORT_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -40,17 +42,31 @@ export interface PeriodPreset {
   range: DateRange;
 }
 
-export const PERIOD_PRESETS: PeriodPreset[] = [
-  { id: "today", label: "Today", range: { from: "2026-09-30", to: "2026-09-30" } },
-  { id: "last-7", label: "Last 7 days", range: { from: "2026-09-24", to: "2026-09-30" } },
-  { id: "last-4w", label: "Last 4 weeks", range: { from: "2026-09-03", to: "2026-09-30" } },
-  { id: "this-month", label: "This month (30d)", range: { from: "2026-09-01", to: "2026-09-30" } },
-  { id: "quarter", label: "Quarterly (3 months)", range: { from: "2026-07-01", to: "2026-09-30" } },
-  { id: "six-months", label: "6 months", range: { from: "2026-04-01", to: "2026-09-30" } },
-  { id: "year", label: "Yearly", range: { from: "2025-10-01", to: "2026-09-30" } },
-];
+/**
+ * Presets counted back from `today`, each ending today: rolling days for the
+ * short ones, whole calendar months (this one included) for the long ones.
+ */
+export function buildPeriodPresets(today: Date = new Date()): PeriodPreset[] {
+  const to = toISODate(today);
+  const daysBack = (n: number) => toISODate(addDays(today, -(n - 1)));
+  const monthsBack = (n: number) => toISODate(new Date(today.getFullYear(), today.getMonth() - (n - 1), 1));
+  return [
+    { id: "today", label: "Today", range: { from: to, to } },
+    { id: "last-7", label: "Last 7 days", range: { from: daysBack(7), to } },
+    // Hidden for now.
+    // { id: "last-4w", label: "Last 4 weeks", range: { from: daysBack(28), to } },
+    { id: "this-month", label: "This month", range: { from: monthsBack(1), to } },
+    { id: "quarter", label: "Quarterly (3 months)", range: { from: monthsBack(3), to } },
+    { id: "six-months", label: "6 months", range: { from: monthsBack(6), to } },
+    { id: "year", label: "Yearly", range: { from: monthsBack(12), to } },
+  ];
+}
 
-export const DEFAULT_PERIOD: OverviewPeriod = { preset: "this-month", range: PERIOD_PRESETS[3].range };
+/** Until the user picks another period, the dashboard shows the last 3 months. */
+export function defaultPeriod(): OverviewPeriod {
+  const quarter = buildPeriodPresets().find((p) => p.id === "quarter")!;
+  return { preset: quarter.id, range: quarter.range };
+}
 
 /** The applied period: a preset, or a custom range (`preset: null`). */
 export interface OverviewPeriod {
@@ -102,7 +118,7 @@ export function channelName(id: ChannelId): string {
 }
 
 export function formatEtb(value: number): string {
-  return formatCurrencyCompact(value);
+  return formatCurrency(value);
 }
 
 export interface DailyPoint {
@@ -207,17 +223,17 @@ export function computeOverview(
   const kpis: OverviewKpi[] = [
     {
       id: "total-value",
-      label: "Total transaction value",
+      label: "Total transaction value (ETB)",
       shortLabel: "Total value",
-      value: formatEtb(value),
+      value: formatAmountValue(value),
       detail: `Avg ${formatEtb(avgTicket)} per transaction`,
     },
     {
       id: "total-volume",
       label: "Total transaction volume",
       shortLabel: "Transactions",
-      value: formatCompactNumber(count),
-      detail: `≈ ${formatCompactNumber(dataDays ? count / dataDays : 0)} per day`,
+      value: formatNumber(count),
+      detail: `≈ ${formatNumber(dataDays ? count / dataDays : 0)} per day`,
     },
     // Success rate and Failed / reversed cards are hidden for now.
     // {
@@ -233,16 +249,16 @@ export function computeOverview(
     //   id: "failed-reversed",
     //   label: "Failed / reversed",
     //   shortLabel: "Failed",
-    //   value: formatCompactNumber(failedReversed),
+    //   value: formatNumber(failedReversed),
     //   detail: row
     //     ? `${name} failed and reversed`
-    //     : `${formatCompactNumber(failed)} failed, ${Math.round(reversed).toLocaleString("en-US")} reversed`,
+    //     : `${formatNumber(failed)} failed, ${Math.round(reversed).toLocaleString("en-US")} reversed`,
     // },
     {
       id: "avg-value",
-      label: "Average transaction value",
+      label: "Average transaction value (ETB)",
       shortLabel: "Avg ticket",
-      value: formatEtb(avgTicket),
+      value: formatAmountValue(avgTicket),
       detail: row ? `${name} average ticket` : `Median ${formatEtb(avgTicket * 0.89)}`,
     },
     // Average latency card is hidden for now.
@@ -285,7 +301,8 @@ export function pickSourceTotals(
 ): SourceTotals | undefined {
   if (!totals) return undefined;
   if (source !== "all") return totals[source] ?? { totalTransactions: 0, totalAmount: 0 };
-  return Object.values(totals).reduce<SourceTotals>(
+  // Only the listed sources, so hidden ones (e.g. TAS) stay out of the total.
+  return WSO2_CHANNEL_SOURCES.map((id) => totals[id]).reduce<SourceTotals>(
     (acc, t) => ({
       totalTransactions: acc.totalTransactions + (t?.totalTransactions ?? 0),
       totalAmount: acc.totalAmount + (t?.totalAmount ?? 0),
@@ -315,16 +332,16 @@ export function applyLiveTotals(
     if (!LIVE_KPI_IDS.has(kpi.id)) return kpi;
     if (!totals) return { ...kpi, value: "—", detail: unavailable };
     if (kpi.id === "total-value") {
-      return { ...kpi, value: formatEtb(totals.totalAmount), detail: `Avg ${formatEtb(avgTicket)} per transaction` };
+      return { ...kpi, value: formatAmountValue(totals.totalAmount), detail: `Avg ${formatEtb(avgTicket)} per transaction` };
     }
     if (kpi.id === "total-volume") {
       return {
         ...kpi,
-        value: formatCompactNumber(count),
-        detail: `≈ ${formatCompactNumber(count / countDays(range))} per day`,
+        value: formatNumber(count),
+        detail: `≈ ${formatNumber(count / countDays(range))} per day`,
       };
     }
-    return { ...kpi, value: formatEtb(avgTicket), detail: `Across ${formatCompactNumber(count)} transactions` };
+    return { ...kpi, value: formatAmountValue(avgTicket), detail: `Across ${formatNumber(count)} transactions` };
   });
 }
 

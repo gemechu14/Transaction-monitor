@@ -1,4 +1,4 @@
-import { formatCompactNumber } from "@/lib/format";
+import { formatAmountValue } from "@/lib/format";
 
 /**
  * A page-independent description of an exported report. Each page builds one
@@ -24,13 +24,20 @@ export const REPORT_COLORS = {
   headerFill: "#EAF7FD",
   zebra: "#F8FAFB",
   highlight: "#E5F7FD",
+  positive: "#127A3E",
+  negative: "#C62828",
+  /** Side A / side B on the Comparison page: orange and blue, as on screen. */
+  sideA: "#FF8A29",
+  sideB: "#00ADEF",
+  calloutFill: "#F2FAFE",
 };
 
 /**
- * How a numeric cell is shown. PDF uses the short form ("427.05M", "17,841"),
- * Excel keeps the full number with a number format, CSV writes plain numbers.
+ * How a numeric cell is shown. PDF and Excel both write numbers in full
+ * ("427,050,000.00", "17,841"); CSV writes plain numbers.
+ * "change" is a signed fraction (0.124 → "+12.4%"), coloured green or red.
  */
-export type CellKind = "text" | "count" | "etb" | "etbRound" | "percent" | "ms";
+export type CellKind = "text" | "count" | "etb" | "etbRound" | "percent" | "ms" | "change";
 
 export type Cell = string | number | null | { value: number | null; kind: CellKind };
 
@@ -39,6 +46,8 @@ export interface ReportColumn {
   kind: CellKind;
   /** Relative width in the PDF table. */
   width?: number;
+  /** A bar under each number scaled to the column's largest value (PDF), or Excel data bars. */
+  bar?: boolean;
 }
 
 export interface ReportTable {
@@ -50,8 +59,29 @@ export interface ReportTable {
   pdf: boolean;
   columns: ReportColumn[];
   rows: Cell[][];
-  /** Row index to emphasise, e.g. the platform picked in the filter. */
-  highlightRow?: number;
+  /** Row indexes to emphasise, e.g. the platform picked in the filter. */
+  highlightRows?: number[];
+  /** Bold total line under the rows. */
+  totalRow?: Cell[];
+  /** Start this table on a new PDF page. */
+  pageBreak?: boolean;
+}
+
+export type BarTone = "a" | "b" | "neutral";
+
+/** A PDF-only bar chart; Excel carries the same figures in the tables. */
+export interface ReportBarChart {
+  title: string;
+  note?: string;
+  legend: { label: string; tone: BarTone }[];
+  /**
+   * "grouped": a row of bars per group, each group scaled to its own largest bar.
+   * "split": one stacked bar per group, the bars being fractions of a whole.
+   */
+  kind: "grouped" | "split";
+  /** Grouped bars only: scale each group to its own largest bar (default) or the whole chart to one. */
+  scale?: "group" | "chart";
+  groups: { label: string; bars: { value: number | null; display: string; tone: BarTone }[] }[];
 }
 
 export interface KeyFigure {
@@ -75,8 +105,11 @@ export interface ReportSpec {
   subtitle?: string;
   orientation: "portrait" | "landscape";
   keyFigures: KeyFigure[];
-  /** Excel only: one-line verdict shown first under Key figures. */
+  /** One-line verdict: first under Key figures in Excel; the Executive summary box in an executive PDF. */
   headline?: { value: string; detail: string };
+  /** Board-pack PDF layout: report details strip, executive summary box, charts and the standard notes. */
+  executive?: boolean;
+  charts?: ReportBarChart[];
   takeaways: string[];
   tables: ReportTable[];
   /** Report-specific notes, shown under the PDF tables and in the Excel notes. */
@@ -138,23 +171,31 @@ export function cellParts(cell: Cell, column: ReportColumn): { value: string | n
   return { value: cell, kind: typeof cell === "number" ? column.kind : "text" };
 }
 
-/** Short display form, used by the PDF. */
+/** Display form used by the PDF: full numbers, amounts with two decimals. */
 export function formatCell(cell: Cell, column: ReportColumn): string {
   const { value, kind } = cellParts(cell, column);
   if (value === null || value === "") return "—";
   if (typeof value === "string") return value;
   switch (kind) {
     case "etb":
-      return formatCompactNumber(value, 2);
+    case "etbRound":
+      return formatAmountValue(value);
     case "percent":
       return `${(value * 100).toFixed(2)}%`;
+    case "change":
+      return formatChange(value);
     case "count":
-    case "etbRound":
     case "ms":
     case "text":
     default:
       return Math.round(value).toLocaleString("en-US");
   }
+}
+
+/** "+12.4%", "-3.0%", "0.0%" */
+export function formatChange(value: number): string {
+  const text = `${Math.abs(value * 100).toFixed(1)}%`;
+  return text === "0.0%" ? text : `${value > 0 ? "+" : "-"}${text}`;
 }
 
 /* ---------- CSV ---------- */
@@ -164,6 +205,7 @@ function csvValue(cell: Cell, column: ReportColumn): string {
   if (value === null) return "";
   if (typeof value === "string") return value;
   if (kind === "percent") return `${(value * 100).toFixed(2)}%`;
+  if (kind === "change") return formatChange(value);
   if (kind === "etb" || kind === "etbRound") return value.toFixed(2);
   return String(Math.round(value));
 }
@@ -197,7 +239,9 @@ export function buildReportCsv(spec: ReportSpec): Blob {
 
   for (const table of spec.tables) {
     lines.push("", csvRow([table.title]), csvRow(table.columns.map((c) => c.header)));
-    for (const row of table.rows) lines.push(csvRow(row.map((cell, i) => csvValue(cell, table.columns[i]))));
+    for (const row of [...table.rows, ...(table.totalRow ? [table.totalRow] : [])]) {
+      lines.push(csvRow(row.map((cell, i) => csvValue(cell, table.columns[i]))));
+    }
   }
 
   // BOM so Excel opens the file as UTF-8.

@@ -18,8 +18,8 @@ import {
 } from "@/components/ui/table";
 import { CHANNELS, type ChannelId } from "@/config/channels";
 import {
-  formatCompactNumber,
-  formatCurrencyCompact,
+  formatAmountValue,
+  formatNumber,
   formatPercent,
   formatSignedPercent,
 } from "@/lib/format";
@@ -57,7 +57,7 @@ export function ByPlatformTableCard({
               <TableRow>
                 <TableHead>Platform</TableHead>
                 <TableHead className="text-right">Transactions</TableHead>
-                <TableHead className="text-right">Value</TableHead>
+                <TableHead className="text-right">Value (ETB)</TableHead>
                 <TableHead className="text-right">Change</TableHead>
                 <TableHead className="text-right">Success</TableHead>
               </TableRow>
@@ -73,10 +73,10 @@ export function ByPlatformTableCard({
                       </span>
                     </TableCell>
                     <TableCell className="text-right text-foreground">
-                      {formatCompactNumber(row.transactionCount)}
+                      {formatNumber(row.transactionCount)}
                     </TableCell>
                     <TableCell className="text-right text-foreground">
-                      {formatCurrencyCompact(row.totalValue, "ETB", 2)}
+                      {formatAmountValue(row.totalValue)}
                     </TableCell>
                     <TableCell
                       className={cn(

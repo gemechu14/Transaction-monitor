@@ -2,14 +2,14 @@
 
 import { SectionCard } from "@/components/overview/section-card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatCompactNumber } from "@/lib/format";
+import { formatNumber } from "@/lib/format";
 import type { OverviewStatusBreakdown } from "@/types/api";
 
 const SEGMENTS: {
   id: keyof OverviewStatusBreakdown;
   label: string;
   color: string;
-  /** Counts are approximate for these, so they read "≈ 683.9K". */
+  /** Counts are approximate for these, so they read "≈ 683,912". */
   approximate?: boolean;
   /** Small counts read better in full, e.g. "8,257". */
   full?: boolean;
@@ -59,7 +59,7 @@ export function StatusDistributionCard({
               const count = data[segment.id];
               const countLabel = segment.full
                 ? count.toLocaleString("en-US")
-                : `${segment.approximate ? "≈ " : ""}${formatCompactNumber(count)}`;
+                : `${segment.approximate ? "≈ " : ""}${formatNumber(count)}`;
               return (
                 <li key={segment.id} className="rounded-xl bg-muted px-4 py-3">
                   <p className="flex items-center gap-2 text-[13px] text-foreground-2">

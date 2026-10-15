@@ -9,7 +9,7 @@ import {
   type Wso2ChannelSource,
   type Wso2Source,
 } from "@/config/wso2-sources";
-import { formatCompactNumber } from "@/lib/format";
+import { formatNumber } from "@/lib/format";
 import type { SourceRow } from "@/lib/overview";
 import { cn } from "@/lib/utils";
 
@@ -190,7 +190,7 @@ export function DistributionByChannelCard({
                 {focusedSlice ? focusedSlice.label : "Total"}
               </span>
               <span className="text-xl font-bold text-foreground tabular-nums">
-                {focusedSlice ? formatShare(share(focusedSlice)) : formatCompactNumber(total)}
+                {focusedSlice ? formatShare(share(focusedSlice)) : formatNumber(total)}
               </span>
             </div>
           </div>

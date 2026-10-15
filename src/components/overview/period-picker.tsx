@@ -1,16 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { CalendarDays, Check, ChevronDown, ChevronLeft, ChevronRight, RotateCcw } from "lucide-react";
+import { CalendarDays, CalendarRange, Check, ChevronDown, ChevronLeft, ChevronRight, RotateCcw } from "lucide-react";
 
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   MAX_CUSTOM_DAYS,
-  OVERVIEW_TODAY,
-  PERIOD_PRESETS,
+  buildPeriodPresets,
   countDays,
   formatFullRangeLabel,
   formatLongDate,
+  todayIso,
   type OverviewPeriod,
 } from "@/lib/overview";
 import { cn } from "@/lib/utils";
@@ -29,6 +29,9 @@ export function PeriodPicker({
   size?: "default" | "sm";
 }) {
   const [open, setOpen] = useState(false);
+  // Worked out on each render so a picker left open past midnight still ends on the real today.
+  const presets = buildPeriodPresets();
+  const today = todayIso();
   const [customOpen, setCustomOpen] = useState(false);
   const [draftFrom, setDraftFrom] = useState<string | null>(value.range.from);
   const [draftTo, setDraftTo] = useState<string | null>(value.range.to);
@@ -56,7 +59,7 @@ export function PeriodPicker({
 
   function apply() {
     if (!canApply || !draftFrom || !draftTo) return;
-    const preset = PERIOD_PRESETS.find((p) => p.range.from === draftFrom && p.range.to === draftTo);
+    const preset = presets.find((p) => p.range.from === draftFrom && p.range.to === draftTo);
     onChange({ preset: preset?.id ?? null, range: { from: draftFrom, to: draftTo } });
     setOpen(false);
   }
@@ -95,7 +98,7 @@ export function PeriodPicker({
               Date range
             </p>
             <ul>
-              {PERIOD_PRESETS.map((preset) => {
+              {presets.map((preset) => {
                 const active = value.preset === preset.id;
                 return (
                   <li key={preset.id}>
@@ -118,18 +121,29 @@ export function PeriodPicker({
                 );
               })}
             </ul>
-            <div className="mt-1 border-t border-line-soft pt-1">
+            {/* Set apart from the presets so it reads as its own action. */}
+            <div className="mt-1.5 border-t border-line-soft px-1 pt-2 pb-1">
               <button
                 type="button"
                 aria-expanded={false}
                 onClick={() => setCustomOpen(true)}
                 className={cn(
-                  "flex w-full items-center justify-between gap-2 rounded-md px-2.5 py-1.5 text-left text-[13px] text-foreground-2 hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-primary",
-                  value.preset === null && "bg-primary-soft font-semibold text-primary-strong hover:bg-primary-soft hover:text-primary-strong",
+                  "group flex w-full items-center gap-2.5 rounded-lg border px-2.5 py-2 text-left transition-colors focus-visible:outline-2 focus-visible:outline-primary",
+                  value.preset === null
+                    ? "border-primary bg-primary-soft"
+                    : "border-primary/40 border-dashed hover:border-primary hover:bg-primary-soft",
                 )}
               >
-                Custom range
-                <ChevronRight className="size-3.5 shrink-0" />
+                <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-primary text-white">
+                  <CalendarRange className="size-4" />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[13px] font-semibold text-primary-strong">Custom range</span>
+                  <span className="block truncate text-[11px] text-muted-foreground">
+                    {value.preset === null ? formatFullRangeLabel(value.range) : "Pick start and end dates"}
+                  </span>
+                </span>
+                <ChevronRight className="size-4 shrink-0 text-primary-strong transition-transform group-hover:translate-x-0.5" />
               </button>
             </div>
           </div>
@@ -148,8 +162,8 @@ export function PeriodPicker({
 
             <div className="space-y-2">
               {[
-                { label: "Start date", value: draftFrom, onChange: setDraftFrom, min: undefined, max: draftTo ?? OVERVIEW_TODAY },
-                { label: "End date", value: draftTo, onChange: setDraftTo, min: draftFrom ?? undefined, max: OVERVIEW_TODAY },
+                { label: "Start date", value: draftFrom, onChange: setDraftFrom, min: undefined, max: draftTo ?? today },
+                { label: "End date", value: draftTo, onChange: setDraftTo, min: draftFrom ?? undefined, max: today },
               ].map((field) => (
                 <label key={field.label} className="block">
                   <span className="mb-1 block text-[10px] font-semibold tracking-wide text-muted-foreground uppercase">
@@ -198,7 +212,7 @@ export function PeriodPicker({
                   type="button"
                   onClick={apply}
                   disabled={!canApply}
-                  className="h-8 rounded-md bg-primary px-4 text-xs font-semibold text-primary-foreground hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-40"
+                  className="h-8 rounded-md bg-primary px-4 text-xs font-semibold text-white hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-40"
                 >
                   Apply
                 </button>

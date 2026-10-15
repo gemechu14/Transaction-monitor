@@ -1,13 +1,12 @@
 "use client";
 
 import {
-  formatEtb2,
   sortSources,
   type LiveRankMetric,
   type SourceRanks,
   type SourceStat,
 } from "@/lib/channels";
-import { formatCompactNumber } from "@/lib/format";
+import { formatAmountValue, formatNumber } from "@/lib/format";
 import { formatEtb } from "@/lib/overview";
 import { cn } from "@/lib/utils";
 
@@ -15,11 +14,12 @@ const TOP_COUNT = 5;
 
 /** Same shell as the Overview KPI cards; three subgrid rows keep titles, numbers and details aligned. */
 const CARD_CLASS =
-  "row-span-3 grid grid-rows-subgrid gap-y-1.5 rounded-2xl border border-border bg-card px-[22px] pt-5 pb-[22px] max-[620px]:p-[18px]";
+  "@container min-w-0 row-span-3 grid grid-rows-subgrid gap-y-1.5 rounded-2xl border border-border bg-card px-[22px] pt-5 pb-[22px] max-[620px]:p-[18px]";
 
 const TITLE_CLASS = "text-base font-semibold text-foreground";
+// Full numbers are long ("ETB 2,232,593,350.43"), so the size follows the card width (up to 32px) and always fits.
 const VALUE_CLASS =
-  "text-[32px] leading-tight font-bold whitespace-nowrap text-primary-display tabular-nums max-[1640px]:text-[28px] max-[620px]:text-2xl";
+  "text-[length:min(32px,8cqi)] leading-tight font-bold whitespace-nowrap text-primary-display tabular-nums";
 const DETAIL_CLASS = "text-[15px] text-muted-foreground tabular-nums max-[620px]:text-[13px]";
 
 /** How the caption above the top 5 describes each ranking. */
@@ -50,16 +50,22 @@ export const FOCUS_CARD_COUNT = 4;
 
 function StatCard({
   title,
+  unit,
   value,
   detail,
 }: {
   title: string;
+  /** Currency of the value, shown after the title, e.g. "ETB". */
+  unit?: string;
   value: React.ReactNode;
   detail: React.ReactNode;
 }) {
   return (
     <div className={CARD_CLASS}>
-      <p className={TITLE_CLASS}>{title}</p>
+      <p className={TITLE_CLASS}>
+        {title}
+        {unit && <span className="font-normal text-muted-foreground"> ({unit})</span>}
+      </p>
       <p className={`kpi-reveal ${VALUE_CLASS}`}>{value}</p>
       <p className={`kpi-reveal ${DETAIL_CLASS}`} style={{ animationDelay: "60ms" }}>
         {detail}
@@ -130,11 +136,12 @@ export function ChannelRankingGrid({ stats, rankBy }: { stats: SourceStat[]; ran
           <StatCard
             key={s.source}
             title={s.name}
-            value={rankBy === "avgTicket" ? formatEtb(s.avgTicket) : formatEtb2(s.value)}
+            unit="ETB"
+            value={formatAmountValue(rankBy === "avgTicket" ? s.avgTicket : s.value)}
             detail={
               rankBy === "avgTicket"
-                ? `per transaction, ${formatCompactNumber(s.count)} transactions`
-                : `${formatCompactNumber(s.count)} transactions`
+                ? `per transaction, ${formatNumber(s.count)} transactions`
+                : `${formatNumber(s.count)} transactions`
             }
           />
         ))}
@@ -156,14 +163,14 @@ export function ChannelFocusGrid({
   return (
     <div className={GRID_CLASS}>
       <StatCard
-        title="Total value"
-        value={formatEtb2(selected.value)}
+        title="Total value (ETB)"
+        value={formatAmountValue(selected.value)}
         detail={`${(selected.valueShare * 100).toFixed(1)}% of all value`}
       />
       <StatCard
         title="Transactions"
-        value={formatCompactNumber(selected.count)}
-        detail={`≈ ${formatCompactNumber(periodDays ? selected.count / periodDays : 0)} per day`}
+        value={formatNumber(selected.count)}
+        detail={`≈ ${formatNumber(periodDays ? selected.count / periodDays : 0)} per day`}
       />
       {/* Success rate and latency need figures the API doesn't return yet.
       <StatCard
@@ -177,8 +184,8 @@ export function ChannelFocusGrid({
         detail="of all transactions"
       />
       <StatCard
-        title="Avg ticket"
-        value={formatEtb(selected.avgTicket)}
+        title="Avg ticket (ETB)"
+        value={formatAmountValue(selected.avgTicket)}
         detail={`All sources average ${formatEtb(platform.avgTicket)}`}
       />
       {/* <StatCard

@@ -2,7 +2,7 @@
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatCurrencyCompact } from "@/lib/format";
+import { formatAmountValue } from "@/lib/format";
 import type { ReconciliationSummary } from "@/types/api";
 
 const STAT_SKELETON_COUNT = 3;
@@ -18,9 +18,9 @@ export function SettlementSummaryCards({
   const grossOutflow = data.reduce((acc, row) => acc + row.outflow, 0);
 
   const stats = [
-    { label: "Gross inflow", value: grossInflow },
-    { label: "Gross outflow", value: grossOutflow },
-    { label: "Net settlement position", value: grossInflow - grossOutflow },
+    { label: "Gross inflow (ETB)", value: grossInflow },
+    { label: "Gross outflow (ETB)", value: grossOutflow },
+    { label: "Net settlement position (ETB)", value: grossInflow - grossOutflow },
   ];
 
   return (
@@ -42,7 +42,7 @@ export function SettlementSummaryCards({
                 </p>
                 <p className="text-2xl font-semibold text-foreground">
                   {stat.value < 0 ? "-" : ""}
-                  {formatCurrencyCompact(Math.abs(stat.value), "ETB", 2)}
+                  {formatAmountValue(Math.abs(stat.value))}
                 </p>
               </CardContent>
             </Card>

@@ -1,4 +1,4 @@
-import type { Borders, Cell as XlsxCell, Workbook, Worksheet } from "exceljs";
+import type { ConditionalFormattingRule, Cell as XlsxCell, Workbook, Worksheet } from "exceljs";
 
 import {
   REPORT_CLASSIFICATION,
@@ -8,7 +8,6 @@ import {
   REPORT_SYSTEM,
   STANDARD_NOTES,
   cellParts,
-  formatGeneratedOn,
   reportReference,
   type CellKind,
   type ReportSpec,
@@ -16,8 +15,8 @@ import {
 } from "./report-spec";
 
 /**
- * Excel export: a Summary sheet (report details, key figures, contents, notes)
- * followed by one sheet per table, each with the same branded masthead.
+ * Excel export, laid out like the PDF: a Summary sheet (key figures, takeaways,
+ * notes) followed by one sheet per table, each with the same branded masthead.
  */
 
 const argb = (hex: string) => `FF${hex.replace("#", "").toUpperCase()}`;
@@ -32,9 +31,12 @@ const NUM_FMT: Record<CellKind, string> = {
   etbRound: "#,##0.00",
   percent: "0.00%",
   ms: "#,##0",
+  // Green rise, red fall.
+  change: "[Color10]+0.0%;[Red]-0.0%;0.0%",
 };
 
-const SUMMARY_WIDTHS = [30, 36, 60, 26];
+// ~215 characters: fills a full-HD Excel window at 100% zoom. Data sheets stretch to the same total.
+const SUMMARY_WIDTHS = [42, 50, 86, 37];
 const SUMMARY_TOTAL_WIDTH = SUMMARY_WIDTHS.reduce((a, b) => a + b, 0);
 const LOGO_HEIGHT = 46;
 
@@ -70,11 +72,10 @@ class SheetWriter {
     this.row += 1;
   }
 
-  masthead(logoId: number | undefined, spec: ReportSpec, eyebrow: string, title: string) {
+  masthead(logoId: number | undefined, eyebrow: string, title: string, subtitle: string) {
     const lines: [string, Partial<XlsxCell["font"]>, number][] = [
-      [REPORT_INSTITUTION.toUpperCase(), { bold: true, size: 12, color: color(C.ink) }, 20],
-      [REPORT_SYSTEM, { size: 9, color: color(C.muted) }, 16],
-      [`Ref. ${reportReference(spec)}`, { size: 8, color: color(C.faint) }, 16],
+      [REPORT_INSTITUTION.toUpperCase(), { bold: true, size: 12, color: color(C.ink) }, 24],
+      [REPORT_SYSTEM, { size: 9, color: color(C.muted) }, 22],
     ];
     for (const [text, font, height] of lines) {
       const cell = this.merged(this.row);
@@ -111,27 +112,24 @@ class SheetWriter {
     titleCell.alignment = { vertical: "middle" };
     this.sheet.getRow(this.row).height = 24;
     this.row += 1;
+
+    const subtitleCell = this.merged(this.row);
+    subtitleCell.value = subtitle;
+    subtitleCell.font = { size: 10, color: color(C.muted) };
+    this.row += 1;
     this.skip();
   }
 
-  details(rows: [string, string][]) {
-    const valueChars = this.widthChars - (this.sheet.getColumn(1).width ?? 10);
-    rows.forEach(([label, value], index) => {
-      const border: Partial<Borders> = { bottom: hair };
-      if (index === 0) border.top = { style: "thin", color: color(C.ink) };
-      const labelCell = this.sheet.getCell(this.row, 1);
-      labelCell.value = label;
-      labelCell.font = { bold: true, size: 8, color: color(C.muted) };
-      labelCell.alignment = { vertical: "middle" };
-      const valueCell = this.merged(this.row, 2);
-      valueCell.value = value;
-      valueCell.font = { size: 10, color: color(C.ink) };
-      valueCell.alignment = { vertical: "middle", wrapText: true };
-      for (let col = 1; col <= this.lastCol; col++) this.sheet.getCell(this.row, col).border = border;
-      this.sheet.getRow(this.row).height = Math.max(17, wrappedHeight(value, valueChars * 0.95));
+  /** Small muted paragraphs across the sheet, like the PDF's notes. */
+  notes(lines: string[]) {
+    for (const line of lines) {
+      const cell = this.merged(this.row);
+      cell.value = line;
+      cell.font = { size: 9, color: color(C.muted) };
+      cell.alignment = { vertical: "top", wrapText: true };
+      this.sheet.getRow(this.row).height = wrappedHeight(line, this.widthChars * 1.05, 13) + 2;
       this.row += 1;
-    });
-    this.skip();
+    }
   }
 
   sectionTitle(text: string) {
@@ -220,7 +218,7 @@ function columnWidths(table: ReportTable): number[] {
   });
 }
 
-function writeSummary(workbook: Workbook, logoId: number | undefined, spec: ReportSpec, tableSheets: { title: string; name: string; rows: number }[]) {
+function writeSummary(workbook: Workbook, logoId: number | undefined, spec: ReportSpec) {
   const sheet = workbook.addWorksheet("Summary", {
     views: [{ showGridLines: false }],
     properties: { tabColor: color(C.primary) },
@@ -229,22 +227,31 @@ function writeSummary(workbook: Workbook, logoId: number | undefined, spec: Repo
   const w = new SheetWriter(sheet, SUMMARY_WIDTHS.length);
   setupSheet(sheet, spec);
 
-  w.masthead(logoId, spec, spec.eyebrow, spec.title);
-  w.details([
-    ["Report", spec.reportName],
-    ["Reference", reportReference(spec)],
-    ["Reporting period", spec.periodLabel],
-    ["Scope", spec.scope],
-    ["Prepared by", spec.preparedBy],
-    ["Access level", spec.accessLevel],
-    ["Generated on", formatGeneratedOn(spec.generatedAt)],
-    ["Classification", REPORT_CLASSIFICATION],
-  ]);
+  w.masthead(logoId, spec.eyebrow, spec.title, spec.subtitle ?? spec.periodLabel);
 
-  const figures: { label: string; value: string; detail: string; long?: boolean }[] = [
-    ...(spec.headline ? [{ label: "Headline", ...spec.headline }] : []),
+  // An executive report opens with the verdict in its own box instead of a Headline row.
+  if (spec.executive && spec.headline) {
+    w.sectionTitle("Executive summary");
+    const box: [string, Partial<XlsxCell["font"]>, number][] = [
+      [spec.headline.value, { bold: true, size: 13, color: color(C.ink) }, 18],
+      [spec.headline.detail, { size: 10, color: color(C.muted) }, 14],
+    ];
+    for (const [text, font, lineHeight] of box) {
+      const cell = w.merged(w.row);
+      cell.value = text;
+      cell.font = font;
+      cell.fill = fill(C.calloutFill);
+      cell.border = { left: { style: "thick", color: color(C.primary) } };
+      cell.alignment = { vertical: "middle", wrapText: true, indent: 1 };
+      sheet.getRow(w.row).height = wrappedHeight(text, SUMMARY_TOTAL_WIDTH * 0.85, lineHeight) + 10;
+      w.row += 1;
+    }
+    w.skip();
+  }
+
+  const figures = [
+    ...(spec.headline && !spec.executive ? [{ label: "Headline", ...spec.headline }] : []),
     ...spec.keyFigures.map((f) => ({ label: f.label, value: f.value, detail: f.detail ?? "" })),
-    ...spec.takeaways.map((t, i) => ({ label: `Takeaway ${i + 1}`, value: t, detail: "", long: true })),
   ];
   if (figures.length) {
     w.sectionTitle("Key figures");
@@ -262,62 +269,36 @@ function writeSummary(workbook: Workbook, logoId: number | undefined, spec: Repo
       const label = sheet.getCell(w.row, 1);
       label.value = f.label;
       label.font = { size: 10, color: color(C.ink) };
-      // A long takeaway spans Value and Detail so it can wrap across the width.
-      const value = f.long ? w.merged(w.row, 2) : sheet.getCell(w.row, 2);
+      const value = sheet.getCell(w.row, 2);
       value.value = f.value;
-      value.font = { bold: !f.long, size: f.long ? 10 : 11, color: color(C.ink) };
-      if (!f.long) {
-        sheet.mergeCells(w.row, 3, w.row, 4);
-        const detail = sheet.getCell(w.row, 3);
-        detail.value = f.detail;
-        detail.font = { size: 10, color: color(C.muted) };
-      }
+      value.font = { bold: true, size: 11, color: color(C.ink) };
+      sheet.mergeCells(w.row, 3, w.row, 4);
+      const detail = sheet.getCell(w.row, 3);
+      detail.value = f.detail;
+      detail.font = { size: 10, color: color(C.muted) };
       for (let col = 1; col <= 4; col++) {
         sheet.getCell(w.row, col).alignment = { vertical: "middle", wrapText: true, indent: 1 };
       }
-      const chars = f.long ? SUMMARY_WIDTHS[1] + SUMMARY_WIDTHS[2] + SUMMARY_WIDTHS[3] : SUMMARY_WIDTHS[2] + SUMMARY_WIDTHS[3];
-      const text = f.long ? f.value : f.detail;
-      sheet.getRow(w.row).height = Math.max(21, wrappedHeight(text, chars * 0.9, 14) + 6);
+      sheet.getRow(w.row).height = Math.max(21, wrappedHeight(f.detail, (SUMMARY_WIDTHS[2] + SUMMARY_WIDTHS[3]) * 0.9, 14) + 6);
       w.row += 1;
     });
     w.skip();
   }
 
-  w.sectionTitle("Contents");
-  for (const t of tableSheets) {
-    const link = sheet.getCell(w.row, 1);
-    link.value = { text: t.title, hyperlink: `#'${t.name}'!A1` };
-    link.font = { underline: true, size: 10, color: color(C.accentText) };
-    const count = sheet.getCell(w.row, 2);
-    count.value = `${t.rows} ${t.rows === 1 ? "row" : "rows"}`;
-    count.font = { size: 10, color: color(C.muted) };
-    w.row += 1;
+  if (spec.takeaways.length) {
+    w.sectionTitle(spec.executive ? "Key findings" : "Key takeaways");
+    for (const t of spec.takeaways) {
+      const cell = w.merged(w.row);
+      cell.value = `•  ${t}`;
+      cell.font = { size: 10, color: color(C.ink) };
+      cell.alignment = { vertical: "top", wrapText: true };
+      sheet.getRow(w.row).height = wrappedHeight(t, SUMMARY_TOTAL_WIDTH * 1.05, 14) + 4;
+      w.row += 1;
+    }
+    w.skip();
   }
-  w.skip();
 
-  w.sectionTitle("Notes");
-  const notes = [
-    STANDARD_NOTES.currency,
-    STANDARD_NOTES.filters,
-    ...spec.notes,
-    STANDARD_NOTES.signature,
-    STANDARD_NOTES.confidentiality,
-  ];
-  const noteChars = SUMMARY_WIDTHS.reduce((a, b) => a + b, 0) * 1.05;
-  for (const note of notes) {
-    const cell = w.merged(w.row);
-    cell.value = `•  ${note}`;
-    cell.font = { size: 9, color: color(C.muted) };
-    cell.alignment = { vertical: "top", wrapText: true };
-    sheet.getRow(w.row).height = wrappedHeight(note, noteChars, 13) + 2;
-    w.row += 1;
-  }
-  w.skip();
-
-  const end = w.merged(w.row);
-  end.value = "END OF REPORT";
-  end.font = { size: 8, color: color(C.faint) };
-  end.alignment = { horizontal: "center" };
+  w.notes(spec.executive ? [...spec.notes, STANDARD_NOTES.currency, STANDARD_NOTES.signature, STANDARD_NOTES.confidentiality] : spec.notes);
 }
 
 function writeTableSheet(workbook: Workbook, logoId: number | undefined, spec: ReportSpec, table: ReportTable, name: string) {
@@ -331,13 +312,11 @@ function writeTableSheet(workbook: Workbook, logoId: number | undefined, spec: R
   sheet.columns = widths.map((width) => ({ width }));
   const w = new SheetWriter(sheet, widths.length);
 
-  w.masthead(logoId, spec, spec.eyebrow, table.title);
-  w.details([
-    ["Report", spec.reportName],
-    ["Reporting period", spec.periodLabel],
-    ["Scope", spec.scope],
-    ...(table.note ? ([["Note", table.note]] as [string, string][]) : []),
-  ]);
+  w.masthead(logoId, spec.eyebrow, table.title, spec.periodLabel);
+  if (table.note) {
+    w.notes([table.note]);
+    w.skip();
+  }
 
   const headerRow = w.row;
   const lastTableCol = table.columns.length;
@@ -351,9 +330,19 @@ function writeTableSheet(workbook: Workbook, logoId: number | undefined, spec: R
     10,
   );
 
-  table.rows.forEach((row, index) => {
-    const highlighted = index === table.highlightRow;
-    w.bodyRowStyle(index, highlighted);
+  const firstBodyRow = w.row;
+  const rows = [...table.rows, ...(table.totalRow ? [table.totalRow] : [])];
+  rows.forEach((row, index) => {
+    const isTotal = index === table.rows.length;
+    const highlighted = isTotal || (table.highlightRows?.includes(index) ?? false);
+    w.bodyRowStyle(index, highlighted && !isTotal);
+    if (isTotal) {
+      for (let col = 1; col <= w.lastCol; col++) {
+        const cell = sheet.getCell(w.row, col);
+        cell.fill = fill(C.headerFill);
+        cell.border = { top: { style: "thin", color: color(C.ink) }, bottom: { style: "medium", color: color(C.ink) } };
+      }
+    }
     row.forEach((raw, i) => {
       const column = table.columns[i];
       const { value, kind } = cellParts(raw, column);
@@ -377,7 +366,25 @@ function writeTableSheet(workbook: Workbook, logoId: number | undefined, spec: R
   });
 
   if (table.rows.length) {
-    sheet.autoFilter = { from: { row: headerRow, column: 1 }, to: { row: w.row - 1, column: lastTableCol } };
+    // The filter and data bars cover the body rows, not the total.
+    const lastBodyRow = firstBodyRow + table.rows.length - 1;
+    sheet.autoFilter = { from: { row: headerRow, column: 1 }, to: { row: lastBodyRow, column: lastTableCol } };
+    table.columns.forEach((col, i) => {
+      if (!col.bar) return;
+      const letter = sheet.getColumn(i + 1).letter;
+      sheet.addConditionalFormatting({
+        ref: `${letter}${firstBodyRow}:${letter}${lastBodyRow}`,
+        rules: [
+          {
+            type: "dataBar",
+            priority: 1,
+            gradient: false,
+            cfvo: [{ type: "num", value: 0 }, { type: "max" }],
+            color: color(C.primary),
+          } as ConditionalFormattingRule,
+        ],
+      });
+    });
   }
   sheet.views = [{ state: "frozen", ySplit: headerRow, topLeftCell: `A${headerRow + 1}`, showGridLines: false }];
   setupSheet(sheet, spec, headerRow);
@@ -394,9 +401,8 @@ export async function buildReportXlsx(spec: ReportSpec, logoSrc: string): Promis
   const logo = await fetchDataUrl(logoSrc);
   const logoId = logo ? workbook.addImage({ base64: logo, extension: "png" }) : undefined;
 
-  const tableSheets = spec.tables.map((t) => ({ title: t.title, name: sheetName(t.title), rows: t.rows.length }));
-  writeSummary(workbook, logoId, spec, tableSheets);
-  spec.tables.forEach((table, i) => writeTableSheet(workbook, logoId, spec, table, tableSheets[i].name));
+  writeSummary(workbook, logoId, spec);
+  spec.tables.forEach((table) => writeTableSheet(workbook, logoId, spec, table, sheetName(table.title)));
 
   const buffer = await workbook.xlsx.writeBuffer();
   return new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });

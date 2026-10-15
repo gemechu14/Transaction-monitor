@@ -28,8 +28,9 @@ import { SpikeAlertBanner } from "@/components/reports/spike-alert-banner";
 import { CHANNEL_LIST, CHANNELS, type ChannelId } from "@/config/channels";
 import { eachDay, formatDateRangeLabel, getLastNDays, shiftRangeBack, type DateRange } from "@/lib/date";
 import {
-  formatCompactNumber,
-  formatCurrencyCompact,
+  formatAmountValue,
+  formatNumber,
+  formatCurrency,
   formatPercent,
   formatSignedPercent,
 } from "@/lib/format";
@@ -149,12 +150,10 @@ export default function ReportsPage() {
 
   const topPlatform = platformRows[0];
   const narrative = topPlatform
-    ? `${CHANNELS[topPlatform.channel]?.name ?? topPlatform.channel} led traffic with ${formatCompactNumber(
+    ? `${CHANNELS[topPlatform.channel]?.name ?? topPlatform.channel} led traffic with ${formatNumber(
         topPlatform.transactionCount,
-      )} transactions and ${formatCurrencyCompact(
-        topPlatform.totalValue,
-        "ETB",
-        2,
+      )} transactions and ${formatCurrency(
+        topPlatform.totalValue
       )} processed. The platform maintained a ${formatPercent(
         topPlatform.successRate,
         2,
@@ -193,11 +192,9 @@ export default function ReportsPage() {
     {
       icon: TrendingUp,
       title: "Business impact",
-      body: `${formatCompactNumber(totalCount)} transactions moved ${formatCurrencyCompact(
-        totalValueSum,
-        "ETB",
-        2,
-      )} in the selected scope. Average ticket value was ${formatCurrencyCompact(avgTicket, "ETB", 1)}.`,
+      body: `${formatNumber(totalCount)} transactions moved ${formatCurrency(
+        totalValueSum
+      )} in the selected scope. Average ticket value was ${formatCurrency(avgTicket)}.`,
     },
     {
       icon: ShieldCheck,
@@ -205,17 +202,15 @@ export default function ReportsPage() {
       body: `Success held at ${formatPercent(
         successRateKpi?.value ?? 0,
         2,
-      )}, with ${formatCompactNumber(totalFailed)} failures and mean gateway latency of ${Math.round(
+      )}, with ${formatNumber(totalFailed)} failures and mean gateway latency of ${Math.round(
         meanLatency,
       )} ms.`,
     },
     {
       icon: Activity,
       title: "Settlement outlook",
-      body: `The period closed at ${formatCurrencyCompact(
-        Math.abs(netSettlement),
-        "ETB",
-        2,
+      body: `The period closed at ${formatCurrency(
+        Math.abs(netSettlement)
       )} ${netSettlement >= 0 ? "net inflow" : "net outflow"}. ${avgValueKpi?.helperText ?? ""}`,
     },
   ];
@@ -309,8 +304,8 @@ export default function ReportsPage() {
             eyebrow="Monthly pulse · Executive brief"
             title={formatDateRangeLabel(range)}
             subtitle={`${channelLabel} · Compared with the immediately preceding period`}
-            bigValue={totalValueKpi ? formatCurrencyCompact(totalValueKpi.value, "ETB", 2) : undefined}
-            bigValueHelper="moved in the selected period"
+            bigValue={totalValueKpi ? formatAmountValue(totalValueKpi.value) : undefined}
+            bigValueHelper="ETB moved in the selected period"
             changeLabel={
               totalValueKpi?.change !== undefined
                 ? `${formatSignedPercent(totalValueKpi.change)} vs previous period`
@@ -323,7 +318,7 @@ export default function ReportsPage() {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <ReportStatTile
               label="Transactions"
-              value={totalVolumeKpi ? formatCompactNumber(totalVolumeKpi.value) : undefined}
+              value={totalVolumeKpi ? formatNumber(totalVolumeKpi.value) : undefined}
               helperText={
                 totalVolumeKpi?.change !== undefined
                   ? formatSignedPercent(totalVolumeKpi.change)
@@ -335,7 +330,7 @@ export default function ReportsPage() {
             <ReportStatTile
               label="Success rate"
               value={successRateKpi ? formatPercent(successRateKpi.value, 2) : undefined}
-              helperText={`${formatCompactNumber(successCount)} successful`}
+              helperText={`${formatNumber(successCount)} successful`}
               isLoading={isLoading}
             />
             <ReportStatTile
@@ -363,8 +358,8 @@ export default function ReportsPage() {
             eyebrow="Monthly impact · Business review"
             title={formatDateRangeLabel(range)}
             subtitle={`${channelLabel} · Business value, reach and reliability`}
-            bigValue={totalValueKpi ? formatCurrencyCompact(totalValueKpi.value, "ETB", 2) : undefined}
-            bigValueHelper="processed across the platform"
+            bigValue={totalValueKpi ? formatAmountValue(totalValueKpi.value) : undefined}
+            bigValueHelper="ETB processed across the platform"
             changeLabel={
               totalValueKpi?.change !== undefined
                 ? `${formatSignedPercent(totalValueKpi.change)} vs previous period`
@@ -377,7 +372,7 @@ export default function ReportsPage() {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <ReportStatTile
               label="Transactions"
-              value={totalVolumeKpi ? formatCompactNumber(totalVolumeKpi.value) : undefined}
+              value={totalVolumeKpi ? formatNumber(totalVolumeKpi.value) : undefined}
               helperText={
                 totalVolumeKpi?.change !== undefined
                   ? formatSignedPercent(totalVolumeKpi.change)
@@ -387,20 +382,20 @@ export default function ReportsPage() {
               isLoading={isLoading}
             />
             <ReportStatTile
-              label="Incoming value"
-              value={formatCurrencyCompact(incomingValueTotal, "ETB", 2)}
-              helperText={`${formatCompactNumber(incomingCountTotal)} transactions`}
+              label="Incoming value (ETB)"
+              value={formatAmountValue(incomingValueTotal)}
+              helperText={`${formatNumber(incomingCountTotal)} transactions`}
               isLoading={isLoading}
             />
             <ReportStatTile
-              label="Outgoing value"
-              value={formatCurrencyCompact(outgoingValueTotal, "ETB", 2)}
-              helperText={`${formatCompactNumber(outgoingCountTotal)} transactions`}
+              label="Outgoing value (ETB)"
+              value={formatAmountValue(outgoingValueTotal)}
+              helperText={`${formatNumber(outgoingCountTotal)} transactions`}
               isLoading={isLoading}
             />
             <ReportStatTile
-              label="Net settlement"
-              value={formatCurrencyCompact(Math.abs(netSettlement), "ETB", 2)}
+              label="Net settlement (ETB)"
+              value={formatAmountValue(Math.abs(netSettlement))}
               helperText={netSettlement >= 0 ? "Net inflow" : "Net outflow"}
               isLoading={isLoading}
             />

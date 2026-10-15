@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CHANNELS, type ChannelId } from "@/config/channels";
-import { formatCurrencyCompact, formatPercent } from "@/lib/format";
+import { formatCurrency, formatPercent } from "@/lib/format";
 
 export interface ChannelMixRow {
   channel: ChannelId;
@@ -51,7 +51,7 @@ export function ChannelMixCard({
                     />
                   </span>
                   <span className="w-32 shrink-0 text-right text-xs text-muted-foreground">
-                    {formatPercent(row.share, 1)} &middot; {formatCurrencyCompact(row.value, "ETB", 2)}
+                    {formatPercent(row.share, 1)} &middot; {formatCurrency(row.value)}
                   </span>
                 </li>
               );

@@ -1,6 +1,7 @@
 import type { ChannelId } from "@/config/channels";
 import { WSO2_SOURCE_LABELS, type Wso2ChannelSource } from "@/config/wso2-sources";
 import type { DateRange } from "@/lib/date";
+import { formatCurrency } from "@/lib/format";
 import { channelName, computeOverview, type SourceRow } from "@/lib/overview";
 import type { OverviewDataset } from "@/types/api";
 
@@ -28,15 +29,9 @@ const PENDING_SHARE = 0.007;
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-const twoDecimals = new Intl.NumberFormat("en-US", {
-  notation: "compact",
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
-
-/** "ETB 280.12M", "ETB 2.00B": always two decimals. */
+/** "ETB 280,123,456.78": always the full amount with two decimals. */
 export function formatEtb2(value: number): string {
-  return `ETB ${twoDecimals.format(value)}`;
+  return formatCurrency(value);
 }
 
 export interface ChannelStat {

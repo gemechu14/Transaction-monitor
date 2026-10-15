@@ -17,7 +17,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { CHANNELS } from "@/config/channels";
-import { formatCurrencyCompact, formatPercent } from "@/lib/format";
+import { formatCurrency, formatPercent } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { ReconciliationSummary } from "@/types/api";
 
@@ -72,10 +72,10 @@ export function PerChannelReconciliationTable({
                       {config?.name ?? row.channel}
                     </TableCell>
                     <TableCell className="text-right text-primary">
-                      {formatCurrencyCompact(row.inflow, "ETB", 2)}
+                      {formatCurrency(row.inflow)}
                     </TableCell>
                     <TableCell className="text-right">
-                      {formatCurrencyCompact(row.outflow, "ETB", 2)}
+                      {formatCurrency(row.outflow)}
                     </TableCell>
                     <TableCell
                       className={cn(
@@ -84,7 +84,7 @@ export function PerChannelReconciliationTable({
                       )}
                     >
                       {row.netPosition < 0 ? "-" : ""}
-                      {formatCurrencyCompact(Math.abs(row.netPosition), "ETB", 2)}
+                      {formatCurrency(Math.abs(row.netPosition))}
                     </TableCell>
                     <TableCell className="text-right">
                       {row.pendingCount.toLocaleString()}

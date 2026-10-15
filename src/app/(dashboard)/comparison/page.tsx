@@ -15,6 +15,7 @@ import {
 import { HeadToHeadCard } from "@/components/comparison/head-to-head-card";
 import { KeyInsightsCard } from "@/components/comparison/key-insights-card";
 import { ShareOfAmountCard } from "@/components/comparison/share-of-amount-card";
+import { usePeriod } from "@/components/providers/period-provider";
 import { ExportMenu } from "@/components/reports/export-menu";
 import { buildComparisonReport, type ComparisonExportInput } from "@/components/reports/report-builders";
 import {
@@ -38,7 +39,7 @@ import {
   type SideFigures,
   type SideKey,
 } from "@/lib/comparison";
-import { DEFAULT_PERIOD, countDays, formatRangeLabel, type OverviewPeriod } from "@/lib/overview";
+import { countDays, formatRangeLabel } from "@/lib/overview";
 
 const CHANNEL_OPTIONS: FieldOption[] = WSO2_CHANNEL_SOURCES.map((id) => ({ id, label: WSO2_SOURCE_LABELS[id] }));
 const PLATFORM_OPTIONS: FieldOption[] = [{ id: "all", label: WSO2_SOURCE_LABELS.all }, ...CHANNEL_OPTIONS];
@@ -61,7 +62,8 @@ export default function ComparisonPage() {
     a: "ips_incoming",
     b: "telebirrToBank",
   });
-  const [period, setPeriod] = useState<OverviewPeriod>(DEFAULT_PERIOD);
+  // Shared across pages; kept until the user picks another period.
+  const { period, setPeriod } = usePeriod();
 
   // Period over period
   const [sameChannel, setSameChannel] = useState<Wso2Source>("all");

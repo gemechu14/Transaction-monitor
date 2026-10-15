@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, FileDown, FileSpreadsheet, FileText, Loader2, Sheet } from "lucide-react";
+import { ChevronDown, FileDown, FileSpreadsheet, FileText, Loader2 /* , Sheet */ } from "lucide-react";
 
 import {
   DropdownMenu,
@@ -107,10 +107,12 @@ export function ExportMenu({
           <FileSpreadsheet className="size-4" />
           Excel (.xlsx)
         </DropdownMenuItem>
+        {/* CSV export hidden for now; restore together with the `Sheet` import.
         <DropdownMenuItem onClick={() => run("csv")}>
           <Sheet className="size-4" />
           CSV
         </DropdownMenuItem>
+        */}
       </DropdownMenuContent>
     </DropdownMenu>
   );

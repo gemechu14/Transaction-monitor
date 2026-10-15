@@ -21,6 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { usePeriod } from "@/components/providers/period-provider";
 import type { ChannelId } from "@/config/channels";
 import { WSO2_SOURCE_LABELS, WSO2_SOURCES, type Wso2Source } from "@/config/wso2-sources";
 import { useAllAdvanced, useOverviewDataset } from "@/hooks";
@@ -32,15 +33,14 @@ import {
   type LiveRankMetric,
 } from "@/lib/channels";
 import {
-  DEFAULT_PERIOD,
   countDays,
   formatRangeLabel,
   sourceRows,
-  type OverviewPeriod,
 } from "@/lib/overview";
 
 export default function ChannelsPage() {
-  const [period, setPeriod] = useState<OverviewPeriod>(DEFAULT_PERIOD);
+  // Shared across pages; kept until the user picks another period.
+  const { period, setPeriod } = usePeriod();
   // `source` drives the live cards. The day-by-day table is still sample data
   // (a new API is coming), so it stays on all platforms for now.
   const [source, setSource] = useState<Wso2Source>("all");
@@ -57,16 +57,20 @@ export default function ChannelsPage() {
   const dataset = datasetQuery.data;
   const isLoading = datasetQuery.isLoading || !dataset;
 
+  // The day-by-day table has no API yet and only sample data for one month, so it
+  // always shows that whole month (as it did before), not the picked period.
+  const tableRange = useMemo(
+    () => (dataset ? { from: dataset.from, to: dataset.to } : period.range),
+    [dataset, period.range],
+  );
   const view = useMemo(
-    () => (dataset ? computeChannels(dataset, period.range, channel) : undefined),
-    [dataset, period.range, channel],
+    () => (dataset ? computeChannels(dataset, tableRange, channel) : undefined),
+    [dataset, tableRange, channel],
   );
 
   const sourceLabel = WSO2_SOURCE_LABELS[source];
   const platformLabel = "All platforms";
-  const dataNote = view?.clipped
-    ? `(${formatRangeLabel(period.range)}; data available from 1 Sep)`
-    : undefined;
+  const dataNote = `of the sample data (${formatRangeLabel(tableRange)})`;
 
   return (
     <div className="space-y-4">
@@ -156,8 +160,8 @@ export default function ChannelsPage() {
         rows={view?.days ?? []}
         channel={channel}
         platformLabel={platformLabel}
-        range={period.range}
-        periodDays={countDays(period.range)}
+        range={tableRange}
+        periodDays={countDays(tableRange)}
         note={dataNote}
         isLoading={isLoading}
       />

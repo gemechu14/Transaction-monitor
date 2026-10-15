@@ -17,7 +17,7 @@ import { SectionCard } from "@/components/overview/section-card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useMediaQuery } from "@/hooks/use-media-query";
-import { formatCompactNumber } from "@/lib/format";
+import { formatNumber } from "@/lib/format";
 import { formatEtb, formatLongDate, formatShortDate, niceAxisMax, type DailyPoint } from "@/lib/overview";
 
 type Metric = "count" | "value";
@@ -56,7 +56,7 @@ export function DailyTransactionsCard({
   );
 
   const format = (value: number) =>
-    metric === "count" ? formatCompactNumber(value) : formatEtb(value);
+    metric === "count" ? formatNumber(value) : formatEtb(value);
 
   const total = rows.reduce((acc, r) => acc + r.value, 0);
   const average = rows.length ? total / rows.length : 0;

@@ -28,7 +28,7 @@ export interface Kpi {
   change?: number;
   format: "number" | "currency" | "percent";
   unit?: string;
-  /** Short supporting line rendered under the value, e.g. "394.3K in · 316.6K out". */
+  /** Short supporting line rendered under the value, e.g. "394,312 in · 316,608 out". */
   helperText?: string;
   /** Whether a positive `change` should read as good news (green) or bad news (red). Defaults to true. */
   higherIsBetter?: boolean;

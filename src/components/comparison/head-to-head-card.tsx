@@ -4,14 +4,13 @@ import { SIDE_DOT_CLASS } from "@/components/comparison/comparison-filter-bar";
 import { ShimmerLine } from "@/components/ui/shimmer-line";
 import {
   avgPayment,
-  formatAmount,
-  formatAvgPayment,
   formatTransactions,
   gapBetween,
   type Gap,
   type SideFigures,
   type SideKey,
 } from "@/lib/comparison";
+import { formatAmountValue } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 const SIDE_STYLES: Record<SideKey, { edge: string; tag: string }> = {
@@ -41,7 +40,7 @@ export function HeadToHeadCard({
       <div className="grid gap-4 min-[901px]:grid-cols-[1fr_minmax(170px,0.55fr)_1fr]" aria-busy={isLoading || undefined}>
         <SidePanel side="a" figures={a} leads={amountGap.leader === "a"} loading={isLoading} />
         <div className="flex flex-col justify-center gap-5 rounded-[14px] px-2 py-1 max-[900px]:flex-row max-[900px]:justify-around max-[900px]:py-0">
-          <GapRow label="Amount gap" gap={amountGap} format={formatAmount} loading={isLoading} />
+          <GapRow label="Amount gap (ETB)" gap={amountGap} format={formatAmountValue} loading={isLoading} />
           <GapRow label="Transactions gap" gap={transactionGap} format={formatTransactions} loading={isLoading} />
         </div>
         <SidePanel side="b" figures={b} leads={amountGap.leader === "b"} loading={isLoading} />
@@ -51,8 +50,9 @@ export function HeadToHeadCard({
 }
 
 const NAME_CLASS = "flex items-center gap-2 text-[17px] font-bold text-foreground";
+// Full numbers are long ("ETB 2,232,593,350.43"), so the size follows the card width (up to 32px) and always fits.
 const AMOUNT_CLASS =
-  "text-[32px] leading-tight font-bold whitespace-nowrap text-foreground tabular-nums max-[1640px]:text-[28px] max-[620px]:text-2xl";
+  "text-[length:min(32px,8cqi)] leading-tight font-bold whitespace-nowrap text-foreground tabular-nums";
 const STAT_CLASS = "text-lg font-semibold text-foreground tabular-nums";
 
 function SidePanel({
@@ -71,12 +71,12 @@ function SidePanel({
     return (
       <div
         className={cn(
-          "relative overflow-hidden rounded-[14px] border border-line-soft bg-muted px-[22px] pt-6 pb-5 before:absolute before:inset-x-0 before:top-0 before:h-1",
+          "@container relative min-w-0 overflow-hidden rounded-[14px] border border-line-soft bg-muted px-[22px] pt-6 pb-5 before:absolute before:inset-x-0 before:top-0 before:h-1",
           SIDE_STYLES[side].edge,
         )}
       >
         <ShimmerLine className={NAME_CLASS} barClassName="w-36" />
-        <p className="mt-4 text-xs text-muted-foreground">Amount</p>
+        <p className="mt-4 text-xs text-muted-foreground">Amount (ETB)</p>
         <ShimmerLine className={AMOUNT_CLASS} barClassName="w-[60%] max-w-52 rounded-lg" delay={80} />
         <div className="mt-4 grid grid-cols-2 gap-4 border-t border-line-soft pt-4">
           <div>
@@ -84,7 +84,7 @@ function SidePanel({
             <ShimmerLine className={STAT_CLASS} barClassName="w-20" delay={160} />
           </div>
           <div>
-            <p className="text-xs text-muted-foreground">Avg payment</p>
+            <p className="text-xs text-muted-foreground">Avg payment (ETB)</p>
             <ShimmerLine className={STAT_CLASS} barClassName="w-20" delay={160} />
           </div>
         </div>
@@ -94,7 +94,7 @@ function SidePanel({
   return (
     <div
       className={cn(
-        "relative overflow-hidden rounded-[14px] border border-line-soft bg-muted px-[22px] pt-6 pb-5 before:absolute before:inset-x-0 before:top-0 before:h-1",
+        "@container relative min-w-0 overflow-hidden rounded-[14px] border border-line-soft bg-muted px-[22px] pt-6 pb-5 before:absolute before:inset-x-0 before:top-0 before:h-1",
         SIDE_STYLES[side].edge,
       )}
     >
@@ -117,9 +117,9 @@ function SidePanel({
         )}
       </div>
 
-      <p className="mt-4 text-xs text-muted-foreground">Amount</p>
+      <p className="mt-4 text-xs text-muted-foreground">Amount (ETB)</p>
       <p className={AMOUNT_CLASS}>
-        {figures.amount === null ? "No data" : formatAmount(figures.amount)}
+        {figures.amount === null ? "No data" : formatAmountValue(figures.amount)}
       </p>
 
       <div className="mt-4 grid grid-cols-2 gap-4 border-t border-line-soft pt-4">
@@ -130,9 +130,9 @@ function SidePanel({
           </p>
         </div>
         <div>
-          <p className="text-xs text-muted-foreground">Avg payment</p>
+          <p className="text-xs text-muted-foreground">Avg payment (ETB)</p>
           <p className={STAT_CLASS}>
-            {avg === null ? "—" : formatAvgPayment(avg)}
+            {avg === null ? "—" : formatAmountValue(avg)}
           </p>
         </div>
       </div>

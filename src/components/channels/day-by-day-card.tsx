@@ -20,7 +20,7 @@ import {
   type Granularity,
   type PeriodRow,
 } from "@/lib/channels";
-import { formatCompactNumber } from "@/lib/format";
+import { formatNumber } from "@/lib/format";
 import type { DateRange } from "@/lib/date";
 import { formatEtb, formatShortDate, niceAxisMax } from "@/lib/overview";
 import { cn } from "@/lib/utils";
@@ -72,7 +72,7 @@ export function DayByDayCard({
   range: DateRange;
   /** Length of the selected period; decides whether week and month grouping are offered. */
   periodDays: number;
-  /** Appended to the subtitle, e.g. when the period starts before the data does. */
+  /** Replaces "in the selected period" in the subtitle, e.g. "of the sample data (1 – 30 Sep 2026)". */
   note?: string;
   isLoading?: boolean;
 }) {
@@ -98,7 +98,7 @@ export function DayByDayCard({
   return (
     <SectionCard
       title={meta.title}
-      description={`${platformLabel}, each ${meta.word} in the selected period${note ? ` ${note}` : ""}`}
+      description={`${platformLabel}, each ${meta.word} ${note ?? "in the selected period"}`}
       actions={
         <>
           {options.length > 1 && (
@@ -316,7 +316,7 @@ function DayChart({ rows, granularity }: { rows: PeriodRow[]; granularity: Granu
             <YAxis
               domain={[0, yMax]}
               ticks={yTicks}
-              tickFormatter={(v: number) => formatCompactNumber(v)}
+              tickFormatter={(v: number) => formatNumber(v)}
               tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
               axisLine={false}
               tickLine={false}
