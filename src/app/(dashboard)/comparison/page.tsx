@@ -8,6 +8,7 @@ import {
   ComparisonTypeToggle,
   IntervalSwitch,
   PeriodField,
+  SideDateField,
   SideSelect,
   SwapButton,
   type FieldOption,
@@ -27,9 +28,12 @@ import {
 import { useAllAdvanced } from "@/hooks";
 import {
   bottomLine,
+  gapBetween,
   buildLivePeriodOptions,
   channelInsights,
+  dayOption,
   defaultPeriodIds,
+  latestCompleteDay,
   liveFigures,
   liveSideName,
   nextOptionId,
@@ -39,6 +43,7 @@ import {
   type SideFigures,
   type SideKey,
 } from "@/lib/comparison";
+import { addDays, parseISODate, toISODate } from "@/lib/date";
 import { countDays, formatRangeLabel } from "@/lib/overview";
 
 const CHANNEL_OPTIONS: FieldOption[] = WSO2_CHANNEL_SOURCES.map((id) => ({ id, label: WSO2_SOURCE_LABELS[id] }));
@@ -74,8 +79,20 @@ export default function ComparisonPage() {
   const periodOptions = useMemo(() => buildLivePeriodOptions(interval), [interval]);
   const periodIdList = periodOptions.map((o) => o.id);
   const selectedPeriods = periodIds ?? defaultPeriodIds(periodOptions);
-  const optionA = periodOptions.find((o) => o.id === selectedPeriods.a);
-  const optionB = periodOptions.find((o) => o.id === selectedPeriods.b);
+  // Day ids are the dates themselves, and the date pickers allow any past day,
+  // so a day period is built from its id rather than looked up in the list.
+  const optionFor = (id: string) => (interval === "day" ? dayOption(id) : periodOptions.find((o) => o.id === id));
+  const optionA = optionFor(selectedPeriods.a);
+  const optionB = optionFor(selectedPeriods.b);
+  const maxDay = latestCompleteDay();
+
+  /** Sets one side's day; if that's the other side's day, moves the other side to the day before. */
+  function pickDay(side: SideKey, iso: string) {
+    const other: SideKey = side === "a" ? "b" : "a";
+    const next = { ...selectedPeriods, [side]: iso };
+    if (next[other] === iso) next[other] = toISODate(addDays(parseISODate(iso), -1));
+    setPeriodIds(next);
+  }
 
   // allAdvanced returns every source per call: one call covers Channel vs channel,
   // and each side of Period over period needs its own date range.
@@ -119,12 +136,16 @@ export default function ComparisonPage() {
       } satisfies ComparisonExportInput,
     };
   }, [isLoading, isChannels, channels, period.range, optionA, optionB, sameChannel, queryA.data, queryB.data]);
+  // Who has the larger amount: that side is blue everywhere on the page, the other orange.
+  const leader = result ? gapBetween(result.a.amount, result.b.amount).leader : null;
 
   return (
-    <div className="space-y-4">
+    // `inter-ui`: Inter at the same line height as the Overview and Channels pages.
+    <div className="inter-ui space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex min-w-0 flex-wrap items-center gap-2.5">
-          <h2 className="text-[22px] font-bold tracking-[-0.02em] text-foreground">Transaction comparison</h2>
+          {/* Page title hidden for now.
+          <h2 className="text-[22px] font-bold tracking-[-0.02em] text-foreground">Transaction comparison</h2> */}
           <span className="inline-flex items-center gap-1.5 rounded-full bg-primary-soft px-2.5 py-1 text-xs font-medium text-primary-strong">
             <span className="size-1.5 shrink-0 rounded-full bg-primary" />
             {type === "channels" ? "Channel vs channel" : "Period over period"}
@@ -139,6 +160,7 @@ export default function ComparisonPage() {
             <SideSelect
               label="Channel A"
               side="a"
+              leader={leader}
               value={channels.a}
               options={CHANNEL_OPTIONS}
               disabledId={channels.b}
@@ -148,6 +170,7 @@ export default function ComparisonPage() {
             <SideSelect
               label="Channel B"
               side="b"
+              leader={leader}
               value={channels.b}
               options={CHANNEL_OPTIONS}
               disabledId={channels.a}
@@ -170,26 +193,48 @@ export default function ComparisonPage() {
                 setPeriodIds(null);
               }}
             />
-            <SideSelect
-              label="Period A"
-              side="a"
-              value={selectedPeriods.a}
-              options={periodOptions}
-              disabledId={selectedPeriods.b}
-              onChange={(id) => setPeriodIds(pickSide(selectedPeriods, "a", id, periodIdList))}
-            />
+            {/* Day: a date picker for each side. Week and month keep the dropdowns. */}
+            {interval === "day" ? (
+              <SideDateField
+                label="Period A"
+                side="a"
+                leader={leader}
+                value={selectedPeriods.a}
+                max={maxDay}
+                onChange={(iso) => pickDay("a", iso)}
+              />
+            ) : (
+              // No `side`: the period pickers show no colour dot.
+              <SideSelect
+                label="Period A"
+                value={selectedPeriods.a}
+                options={periodOptions}
+                disabledId={selectedPeriods.b}
+                onChange={(id) => setPeriodIds(pickSide(selectedPeriods, "a", id, periodIdList))}
+              />
+            )}
             <SwapButton
               label="Swap periods"
               onClick={() => setPeriodIds({ a: selectedPeriods.b, b: selectedPeriods.a })}
             />
-            <SideSelect
-              label="Period B"
-              side="b"
-              value={selectedPeriods.b}
-              options={periodOptions}
-              disabledId={selectedPeriods.a}
-              onChange={(id) => setPeriodIds(pickSide(selectedPeriods, "b", id, periodIdList))}
-            />
+            {interval === "day" ? (
+              <SideDateField
+                label="Period B"
+                side="b"
+                leader={leader}
+                value={selectedPeriods.b}
+                max={maxDay}
+                onChange={(iso) => pickDay("b", iso)}
+              />
+            ) : (
+              <SideSelect
+                label="Period B"
+                value={selectedPeriods.b}
+                options={periodOptions}
+                disabledId={selectedPeriods.a}
+                onChange={(id) => setPeriodIds(pickSide(selectedPeriods, "b", id, periodIdList))}
+              />
+            )}
           </>
         )}
         <div className="ml-auto self-start max-[760px]:order-first max-[760px]:ml-0 max-[760px]:self-end">

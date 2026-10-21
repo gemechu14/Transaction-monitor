@@ -7,7 +7,8 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  /* Inter across the app; Geist stays loaded as the fallback. */
+  --font-sans: var(--font-inter), var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --font-heading: var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
@@ -80,7 +81,8 @@
   --popover-foreground: #14212b;
 
   /* Brand accent (#00ADEF) with a dark-navy foreground for AA contrast */
-  --primary: #00adef;
+  /* Brand blue at 80% opacity (#00adef / rgb 0 173 239). */
+  --primary: rgba(0, 173, 239, 0.8);
   --primary-foreground: #03202e;
 
   --secondary: #eef2f6;
@@ -97,10 +99,10 @@
 
   --border: #dde5ea;
   --input: #dde5ea;
-  --ring: #00adef;
+  --ring: rgba(0, 173, 239, 0.8);
 
   /* Chart series palette: brand, navy, green, amber, violet */
-  --chart-1: #00adef;
+  --chart-1: rgba(0, 173, 239, 0.8);
   --chart-2: #0b3c5d;
   --chart-3: #12b76a;
   --chart-4: #f79009;
@@ -112,11 +114,11 @@
   --sidebar: #ffffff;
   --sidebar-foreground: #3a4a55;
   --sidebar-primary: #e4f6fd;
-  --sidebar-primary-foreground: #0073a6;
+  --sidebar-primary-foreground: rgba(0, 173, 239, 0.8);
   --sidebar-accent: #f5f8fa;
   --sidebar-accent-foreground: #14212b;
   --sidebar-border: #dde5ea;
-  --sidebar-ring: #00adef;
+  --sidebar-ring: rgba(0, 173, 239, 0.8);
 
   /* Muted status colors for transaction states */
   --status-success: #12b76a;
@@ -131,8 +133,8 @@
   /* Overview spec tokens: brand blue/orange tiers, outcome colours, chart tracks */
   --foreground-2: #3a4a55;
   --line-soft: #ecf1f4;
-  --primary-strong: #0073a6;
-  --primary-display: #0099d6;
+  --primary-strong: rgba(0, 173, 239, 0.8);
+  --primary-display: rgba(0, 173, 239, 0.8);
   --primary-soft: #e4f6fd;
   --orange: #f8953f;
   --orange-strong: #a8540f;
@@ -146,9 +148,10 @@
   --skeleton-shine: rgba(255, 255, 255, 0.85);
   --rank-text: #0f172a;
   --rank-muted: #64748b;
-  --rank-accent: #0ea5e9;
-  --rank-accent-strong: #0284c7;
-  --rank-accent-soft: #e0f2fe;
+  /* Same 80% brand blue as --primary, so the channel bars match the rest of the app. */
+  --rank-accent: var(--primary);
+  --rank-accent-strong: var(--primary);
+  --rank-accent-soft: var(--primary-soft);
   --cp-track: #e8edf3;
   --cp-card: #ffffff;
   --cp-border: #e5e7eb;
@@ -164,7 +167,7 @@
   --popover: #0f172b;
   --popover-foreground: #e8eef8;
 
-  --primary: #00adef;
+  --primary: rgba(0, 173, 239, 0.8);
   --primary-foreground: #03202e;
 
   --secondary: #1f2937;
@@ -180,9 +183,9 @@
 
   --border: #243149;
   --input: #243149;
-  --ring: #00adef;
+  --ring: rgba(0, 173, 239, 0.8);
 
-  --chart-1: #00adef;
+  --chart-1: rgba(0, 173, 239, 0.8);
   --chart-2: #4c8dc2;
   --chart-3: #17b26a;
   --chart-4: #fdb022;
@@ -191,11 +194,11 @@
   --sidebar: #151f32;
   --sidebar-foreground: #b8c4d8;
   --sidebar-primary: #0b2a47;
-  --sidebar-primary-foreground: #00adef;
+  --sidebar-primary-foreground: rgba(0, 173, 239, 0.8);
   --sidebar-accent: #18233b;
   --sidebar-accent-foreground: #e8eef8;
   --sidebar-border: #243149;
-  --sidebar-ring: #00adef;
+  --sidebar-ring: rgba(0, 173, 239, 0.8);
 
   --status-success: #17b26a;
   --status-success-foreground: #05231a;
@@ -208,8 +211,8 @@
 
   --foreground-2: #b8c4d8;
   --line-soft: #1c2740;
-  --primary-strong: #00adef;
-  --primary-display: #00adef;
+  --primary-strong: rgba(0, 173, 239, 0.8);
+  --primary-display: rgba(0, 173, 239, 0.8);
   --primary-soft: #0b2a47;
   --orange: #f8953f;
   --orange-strong: #f8953f;
@@ -223,9 +226,9 @@
   --skeleton-shine: rgba(120, 200, 245, 0.12);
   --rank-text: #e5edf7;
   --rank-muted: #94a3b8;
-  --rank-accent: #38bdf8;
-  --rank-accent-strong: #7dd3fc;
-  --rank-accent-soft: rgba(56, 189, 248, 0.14);
+  --rank-accent: var(--primary);
+  --rank-accent-strong: var(--primary);
+  --rank-accent-soft: var(--primary-soft);
   --cp-track: #1f2b40;
   --cp-card: #111a2b;
   --cp-border: #243049;
@@ -243,8 +246,8 @@
   --l-text: #0f172b;
   --l-text-2: #334155;
   --l-muted: #5b6b82;
-  --l-primary: #00adef;
-  --l-primary-strong: #0073a6;
+  --l-primary: rgba(0, 173, 239, 0.8);
+  --l-primary-strong: rgba(0, 173, 239, 0.8);
   --l-primary-soft: #e0f3fc;
   --l-primary-ink: #03202e;
   --l-bad: #b4331f;
@@ -261,7 +264,7 @@
   --l-text: #e8eef8;
   --l-text-2: #b8c4d8;
   --l-muted: #8b99b2;
-  --l-primary-strong: #00adef;
+  --l-primary-strong: rgba(0, 173, 239, 0.8);
   --l-primary-soft: #0b2a47;
   --l-bad: #ff8a73;
   --l-bad-soft: #3a1d24;

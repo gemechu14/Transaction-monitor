@@ -73,10 +73,12 @@ export default function ChannelsPage() {
   const dataNote = `of the sample data (${formatRangeLabel(tableRange)})`;
 
   return (
-    <div className="space-y-4">
+    // `inter-ui`: Inter at the same line height as the Overview channel cards.
+    <div className="inter-ui space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex min-w-0 flex-wrap items-center gap-2.5">
-          <h2 className="text-[22px] font-bold tracking-[-0.02em] text-foreground">Channel performance</h2>
+          {/* Page title hidden for now.
+          <h2 className="text-[22px] font-bold tracking-[-0.02em] text-foreground">Channel performance</h2> */}
           <span className="inline-flex items-center gap-1.5 rounded-full bg-primary-soft py-1 pr-2 pl-2.5 text-xs font-medium text-primary-strong">
             <span className="size-1.5 shrink-0 rounded-full bg-primary" />
             {sourceLabel}

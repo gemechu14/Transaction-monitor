@@ -4,13 +4,13 @@ import { useState } from "react";
 
 import { SectionCard } from "@/components/overview/section-card";
 import {
-  WSO2_SOURCE_INITIALS,
   WSO2_SOURCE_LABELS,
   type Wso2ChannelSource,
   type Wso2Source,
 } from "@/config/wso2-sources";
 import { formatNumber } from "@/lib/format";
-import type { SourceRow } from "@/lib/overview";
+import type { DateRange } from "@/lib/date";
+import { formatFullRangeLabel, type SourceRow } from "@/lib/overview";
 import { cn } from "@/lib/utils";
 
 const SIZE = 176;
@@ -21,7 +21,7 @@ const GAP = 3;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
 const LAYOUT_CLASS = "flex items-center gap-8 max-[620px]:flex-col max-[620px]:items-stretch";
-const ROW_CLASS = "flex w-full items-center gap-2.5 rounded-lg px-2 py-1 text-left text-sm";
+const ROW_CLASS = "flex w-full items-center gap-2.5 rounded-lg px-2 py-[7px] text-left text-[13px]";
 
 /** Sources shown by name; the rest are added up into one "Others" row and slice. */
 const TOP_COUNT = 5;
@@ -32,7 +32,6 @@ type SliceKey = Wso2ChannelSource | typeof OTHERS;
 interface Slice {
   key: SliceKey;
   label: string;
-  initials: string;
   count: number;
   /** The sources this slice covers: one, or every source folded into Others. */
   sources: Wso2ChannelSource[];
@@ -44,7 +43,6 @@ function toSlices(rows: SourceRow[]): Slice[] {
   const top: Slice[] = sorted.slice(0, TOP_COUNT).map((row) => ({
     key: row.source,
     label: WSO2_SOURCE_LABELS[row.source],
-    initials: WSO2_SOURCE_INITIALS[row.source],
     count: row.totalTransactions,
     sources: [row.source],
   }));
@@ -55,7 +53,6 @@ function toSlices(rows: SourceRow[]): Slice[] {
     {
       key: OTHERS,
       label: "Others",
-      initials: `+${rest.length}`,
       count: rest.reduce((acc, r) => acc + r.totalTransactions, 0),
       sources: rest.map((r) => r.source),
     },
@@ -88,7 +85,7 @@ function LoadingState() {
           const delay = { animationDelay: `${index * 60}ms` };
           return (
             <li key={index} className={ROW_CLASS}>
-              <span className="skeleton-shimmer size-[26px] shrink-0 rounded-lg" style={delay} />
+              <span className="skeleton-shimmer size-2.5 shrink-0 rounded-full" style={delay} />
               <span className="flex-1">
                 <span className="skeleton-shimmer block h-3 w-28 rounded-full" style={delay} />
               </span>
@@ -108,12 +105,15 @@ function LoadingState() {
  */
 export function DistributionByChannelCard({
   data,
+  range,
   selected,
   onSelect,
   isLoading,
   errorMessage,
 }: {
   data: SourceRow[];
+  /** The page's period, shown in the subtitle. */
+  range: DateRange;
   selected: Wso2Source;
   onSelect: (source: Wso2Source) => void;
   isLoading?: boolean;
@@ -142,7 +142,7 @@ export function DistributionByChannelCard({
   }));
 
   return (
-    <SectionCard title="Distribution by channel" description="Share of total transaction count">
+    <SectionCard title="Share of transactions" description={`Share of transaction count, ${formatFullRangeLabel(range)}`}>
       {isLoading ? (
         <LoadingState />
       ) : data.length === 0 ? (
@@ -187,7 +187,7 @@ export function DistributionByChannelCard({
             </svg>
             <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-6 text-center">
               <span className="max-w-full truncate text-xs text-muted-foreground">
-                {focusedSlice ? focusedSlice.label : "Total"}
+                {focusedSlice ? focusedSlice.label : "Transactions"}
               </span>
               <span className="text-xl font-bold text-foreground tabular-nums">
                 {focusedSlice ? formatShare(share(focusedSlice)) : formatNumber(total)}
@@ -217,9 +217,12 @@ export function DistributionByChannelCard({
                       isSelected && "bg-primary-soft hover:bg-primary-soft",
                     )}
                   >
-                    <span className="flex size-[26px] shrink-0 items-center justify-center rounded-lg bg-primary-soft text-[11px] font-bold text-primary-strong">
-                      {slice.initials}
-                    </span>
+                    {/* Same colour as the slice; the initials badges are gone to match the channel cards. */}
+                    <span
+                      className="size-2.5 shrink-0 rounded-full"
+                      style={{ backgroundColor: isOthers ? "var(--donut-others)" : "var(--primary)" }}
+                      aria-hidden
+                    />
                     <span className="min-w-0 flex-1 truncate text-foreground">
                       {slice.label}
                       {isOthers && (

@@ -1,6 +1,11 @@
 "use client";
 
-import { SIDE_DOT_CLASS } from "@/components/comparison/comparison-filter-bar";
+import {
+  TONE_DOT_CLASS,
+  sideTone,
+  type SideLeader,
+  type SideTone,
+} from "@/components/comparison/comparison-filter-bar";
 import { ShimmerLine } from "@/components/ui/shimmer-line";
 import {
   avgPayment,
@@ -13,12 +18,13 @@ import {
 import { formatAmountValue } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
-const SIDE_STYLES: Record<SideKey, { edge: string; tag: string }> = {
-  a: { edge: "before:bg-orange", tag: "bg-orange-soft text-orange-strong" },
-  b: { edge: "before:bg-primary", tag: "bg-primary-soft text-primary-strong" },
+// Keyed by tone, not side: the larger amount is always blue (see `sideTone`).
+const TONE_STYLES: Record<SideTone, { edge: string; tag: string }> = {
+  lead: { edge: "before:bg-primary", tag: "bg-primary-soft text-primary-strong" },
+  other: { edge: "before:bg-orange", tag: "bg-orange-soft text-orange-strong" },
 };
 
-const GAP_TEXT: Record<SideKey, string> = { a: "text-orange-strong", b: "text-primary-strong" };
+const TONE_GAP_TEXT: Record<SideTone, string> = { lead: "text-primary-strong", other: "text-orange-strong" };
 
 /** Side A panel · the gaps · Side B panel. Stacks with the gaps as a row between the panels at ≤900px. */
 export function HeadToHeadCard({
@@ -38,30 +44,33 @@ export function HeadToHeadCard({
       <h2 className="mb-4 text-base font-semibold text-foreground">Head-to-head</h2>
       {/* Loading keeps the real layout and swaps figures for shimmer lines, so nothing shifts. */}
       <div className="grid gap-4 min-[901px]:grid-cols-[1fr_minmax(170px,0.55fr)_1fr]" aria-busy={isLoading || undefined}>
-        <SidePanel side="a" figures={a} leads={amountGap.leader === "a"} loading={isLoading} />
+        <SidePanel side="a" tone={sideTone("a", amountGap.leader)} figures={a} leads={amountGap.leader === "a"} loading={isLoading} />
         <div className="flex flex-col justify-center gap-5 rounded-[14px] px-2 py-1 max-[900px]:flex-row max-[900px]:justify-around max-[900px]:py-0">
-          <GapRow label="Amount gap (ETB)" gap={amountGap} format={formatAmountValue} loading={isLoading} />
-          <GapRow label="Transactions gap" gap={transactionGap} format={formatTransactions} loading={isLoading} />
+          <GapRow label="Amount gap (ETB)" gap={amountGap} leader={amountGap.leader} format={formatAmountValue} loading={isLoading} />
+          <GapRow label="Transactions gap" gap={transactionGap} leader={amountGap.leader} format={formatTransactions} loading={isLoading} />
         </div>
-        <SidePanel side="b" figures={b} leads={amountGap.leader === "b"} loading={isLoading} />
+        <SidePanel side="b" tone={sideTone("b", amountGap.leader)} figures={b} leads={amountGap.leader === "b"} loading={isLoading} />
       </div>
     </section>
   );
 }
 
 const NAME_CLASS = "flex items-center gap-2 text-[17px] font-bold text-foreground";
-// Full numbers are long ("ETB 2,232,593,350.43"), so the size follows the card width (up to 32px) and always fits.
+// Full numbers are long ("13,855,022,832.27"), so the size follows the card width (up to 26px) and always fits.
 const AMOUNT_CLASS =
-  "text-[length:min(32px,8cqi)] leading-tight font-bold whitespace-nowrap text-foreground tabular-nums";
+  "text-[length:min(26px,6.5cqi)] leading-tight font-bold whitespace-nowrap text-foreground tabular-nums";
 const STAT_CLASS = "text-lg font-semibold text-foreground tabular-nums";
 
 function SidePanel({
   side,
+  tone,
   figures,
   leads,
   loading,
 }: {
   side: SideKey;
+  /** Blue for the side with the larger amount, orange for the other. */
+  tone: SideTone;
   figures: SideFigures;
   leads: boolean;
   loading?: boolean;
@@ -72,7 +81,7 @@ function SidePanel({
       <div
         className={cn(
           "@container relative min-w-0 overflow-hidden rounded-[14px] border border-line-soft bg-muted px-[22px] pt-6 pb-5 before:absolute before:inset-x-0 before:top-0 before:h-1",
-          SIDE_STYLES[side].edge,
+          TONE_STYLES[tone].edge,
         )}
       >
         <ShimmerLine className={NAME_CLASS} barClassName="w-36" />
@@ -95,13 +104,13 @@ function SidePanel({
     <div
       className={cn(
         "@container relative min-w-0 overflow-hidden rounded-[14px] border border-line-soft bg-muted px-[22px] pt-6 pb-5 before:absolute before:inset-x-0 before:top-0 before:h-1",
-        SIDE_STYLES[side].edge,
+        TONE_STYLES[tone].edge,
       )}
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="min-w-0">
           <p className={NAME_CLASS}>
-            <span className={cn("size-2.5 shrink-0 rounded-full", SIDE_DOT_CLASS[side])} aria-hidden />
+            <span className={cn("size-2.5 shrink-0 rounded-full", TONE_DOT_CLASS[tone])} aria-hidden />
             <span className="truncate">{figures.name}</span>
             {/* Inline so Period over period panels keep the same layout as Channel vs channel. */}
             {figures.caption && (
@@ -111,7 +120,7 @@ function SidePanel({
           </p>
         </div>
         {leads && (
-          <span className={cn("rounded-full px-2.5 py-1 text-xs font-semibold", SIDE_STYLES[side].tag)}>
+          <span className={cn("rounded-full px-2.5 py-1 text-xs font-semibold", TONE_STYLES[tone].tag)}>
             Leads on amount
           </span>
         )}
@@ -143,11 +152,14 @@ function SidePanel({
 function GapRow({
   label,
   gap,
+  leader,
   format,
   loading,
 }: {
   label: string;
   gap: Gap;
+  /** Who leads on amount; the gap takes that side's colour so it matches the panels. */
+  leader: SideLeader;
   format: (value: number) => string;
   loading?: boolean;
 }) {
@@ -167,7 +179,7 @@ function GapRow({
       <p
         className={cn(
           "text-xl font-bold whitespace-nowrap tabular-nums",
-          ahead ? GAP_TEXT[ahead] : "text-foreground",
+          ahead ? TONE_GAP_TEXT[sideTone(ahead, leader)] : "text-foreground",
         )}
       >
         {ahead === "a" && <span aria-hidden>◀ </span>}

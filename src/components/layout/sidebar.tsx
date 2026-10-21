@@ -56,11 +56,12 @@ export function Sidebar({
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto pt-2 pb-4">
+        {/* "Menu" section title hidden for now.
         {!collapsed && (
-          <p className="px-6 pb-1.5 text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
+          <p className="flex items-center gap-3 px-6 pb-2 text-[10px] font-semibold tracking-[0.14em] text-muted-foreground uppercase before:h-px before:flex-1 before:bg-sidebar-border after:h-px after:flex-1 after:bg-sidebar-border">
             Menu
           </p>
-        )}
+        )} */}
         <NavLinks collapsed={collapsed} />
       </div>
 

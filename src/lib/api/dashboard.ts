@@ -1,5 +1,9 @@
 import { AUTH_API_BASE_URL } from "@/lib/api/auth-client";
 import { ApiError } from "@/lib/api/client";
+// Dummy data, for working without the backend: uncomment this import and the two
+// lines at the top of `getAllAdvanced`.
+// import { generateMockAllAdvanced } from "@/lib/mock/all-advanced-data";
+// import { mockDelay } from "@/lib/mock/overview-data";
 import type { AllAdvancedParams, AllAdvancedTotals } from "@/types/api";
 
 /**
@@ -11,6 +15,10 @@ export const ALL_ADVANCED_PATH = "/api/dashboard/all-advanced";
 
 /** Per-source live totals from WSO2. Needs the session cookie like the auth calls. */
 export async function getAllAdvanced(params: AllAdvancedParams): Promise<AllAdvancedTotals> {
+  // Dummy data instead of the live call:
+  // await mockDelay();
+  // return generateMockAllAdvanced(params);
+
   const search = new URLSearchParams({
     startDate: params.startDate,
     endDate: params.endDate,

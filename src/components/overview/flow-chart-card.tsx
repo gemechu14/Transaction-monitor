@@ -40,7 +40,7 @@ import { formatNumber, formatCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { TransactionTrendPoint } from "@/types/api";
 
-const INCOMING_COLOR = "#00ADEF";
+const INCOMING_COLOR = "rgba(0, 173, 239, 0.8)";
 const OUTGOING_COLOR = "#F79009";
 const OUTGOING_FILL_COLOR = "#98A2B3";
 

@@ -8,7 +8,26 @@ import type { ComparisonType, Interval, SideKey } from "@/lib/comparison";
 import type { OverviewPeriod } from "@/lib/overview";
 import { cn } from "@/lib/utils";
 
-export const SIDE_DOT_CLASS: Record<SideKey, string> = { a: "bg-orange", b: "bg-primary" };
+/** Which side has the larger amount; "even" or null (no figures yet) when neither does. */
+export type SideLeader = SideKey | "even" | null;
+export type SideTone = "lead" | "other";
+
+/**
+ * Colours follow the figures, not the position: the side with the larger amount
+ * is always the brand blue and the other side orange. Until one side leads
+ * (loading, even, or no data), A is orange and B is blue.
+ */
+export function sideTone(side: SideKey, leader: SideLeader): SideTone {
+  const lead: SideKey = leader === "a" || leader === "b" ? leader : "b";
+  return side === lead ? "lead" : "other";
+}
+
+export const TONE_DOT_CLASS: Record<SideTone, string> = { lead: "bg-primary", other: "bg-orange" };
+
+/** Dot colour for a side, given who leads. */
+export function sideDotClass(side: SideKey, leader: SideLeader): string {
+  return TONE_DOT_CLASS[sideTone(side, leader)];
+}
 
 export interface FieldOption {
   id: string;
@@ -66,6 +85,52 @@ export function ComparisonFilterBar({ children }: { children: React.ReactNode })
   );
 }
 
+/** Earliest day the date fields accept; anything older is a half-typed year. */
+const MIN_DAY = "2000-01-01";
+
+/** A date picker for one side, styled like `SideSelect`. */
+export function SideDateField({
+  label,
+  side,
+  value,
+  max,
+  onChange,
+}: {
+  label: string;
+  side: SideKey;
+  /** Unused while the colour dot is hidden; kept so it can come back. */
+  leader?: SideLeader;
+  /** "YYYY-MM-DD" */
+  value: string;
+  /** Latest pickable day, "YYYY-MM-DD". */
+  max: string;
+  onChange: (iso: string) => void;
+}) {
+  const id = `side-date-${side}`;
+  return (
+    <Field label={label} htmlFor={id}>
+      <span className="flex h-10 min-w-40 items-center gap-2 rounded-[10px] border border-border bg-card pr-2.5 pl-3 hover:border-foreground-2 focus-within:border-primary max-[760px]:w-full">
+        {/* Side colour dot hidden for the date fields.
+        <span className={cn("size-2 shrink-0 rounded-full", sideDotClass(side, leader))} aria-hidden /> */}
+        <input
+          id={id}
+          type="date"
+          value={value}
+          min={MIN_DAY}
+          max={max}
+          // Ignore empty or half-typed values (e.g. year "0012" while typing 2026),
+          // and keep typed dates within `max`, since typing can get past the picker's limit.
+          onChange={(event) => {
+            const next = event.target.value;
+            if (next && next >= MIN_DAY) onChange(next > max ? max : next);
+          }}
+          className="min-w-0 flex-1 bg-transparent text-sm font-semibold text-foreground tabular-nums outline-none"
+        />
+      </span>
+    </Field>
+  );
+}
+
 export function Field({
   label,
   htmlFor,
@@ -89,6 +154,7 @@ export function Field({
 export function SideSelect({
   label,
   side,
+  leader = null,
   value,
   options,
   disabledId,
@@ -96,6 +162,8 @@ export function SideSelect({
 }: {
   label: string;
   side?: SideKey;
+  /** Who has the larger amount, so the dot matches the cards' colours. */
+  leader?: SideLeader;
   value: string;
   options: FieldOption[];
   disabledId?: string;
@@ -109,7 +177,8 @@ export function SideSelect({
           aria-label={label}
           className="h-10 data-[size=default]:h-10 min-w-40 rounded-[10px] border-border bg-card pr-2.5 pl-3 text-sm font-semibold hover:border-foreground-2 max-[760px]:w-full"
         >
-          {side && <span className={cn("size-2 shrink-0 rounded-full", SIDE_DOT_CLASS[side])} aria-hidden />}
+          {/* Only pickers given a `side` show its colour dot (Channel A/B, not the periods). */}
+          {side && <span className={cn("size-2 shrink-0 rounded-full", sideDotClass(side, leader))} aria-hidden />}
           <SelectValue />
         </SelectTrigger>
         <SelectContent>

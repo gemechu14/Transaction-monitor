@@ -391,10 +391,7 @@ export function buildLivePeriodOptions(interval: Interval, today: Date = new Dat
   const options: PeriodOption[] = [];
 
   if (interval === "day") {
-    for (let i = count; i >= 1; i--) {
-      const iso = toISODate(addDays(today, -i));
-      options.push({ id: iso, label: `${weekday(iso)} ${formatShortDate(iso)}`, shortLabel: formatShortDate(iso), range: { from: iso, to: iso } });
-    }
+    for (let i = count; i >= 1; i--) options.push(dayOption(toISODate(addDays(today, -i))));
     return options;
   }
 
@@ -422,6 +419,16 @@ export function buildLivePeriodOptions(interval: Interval, today: Date = new Dat
     });
   }
   return options;
+}
+
+/** A single day as a period, e.g. for the Day interval's date pickers. `iso` is "YYYY-MM-DD". */
+export function dayOption(iso: string): PeriodOption {
+  return { id: iso, label: `${weekday(iso)} ${formatShortDate(iso)}`, shortLabel: formatShortDate(iso), range: { from: iso, to: iso } };
+}
+
+/** The latest whole day: yesterday (today is still partial). */
+export function latestCompleteDay(today: Date = new Date()): string {
+  return toISODate(addDays(today, -1));
 }
 
 /** One source's (or all sources') amount and count from an allAdvanced response; `null` until loaded. */

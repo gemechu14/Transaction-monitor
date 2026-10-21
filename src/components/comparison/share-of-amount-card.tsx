@@ -1,9 +1,9 @@
 "use client";
 
-import { SIDE_DOT_CLASS } from "@/components/comparison/comparison-filter-bar";
+import { sideDotClass, sideTone } from "@/components/comparison/comparison-filter-bar";
 import { SectionCard } from "@/components/overview/section-card";
 import { ShimmerLine, ShimmerRing } from "@/components/ui/shimmer-line";
-import { shareOfAmount, type SideFigures, type SideKey } from "@/lib/comparison";
+import { gapBetween, shareOfAmount, type SideFigures, type SideKey } from "@/lib/comparison";
 import { formatAmountValue } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -12,7 +12,8 @@ const RADIUS = 84;
 const STROKE = 30;
 const GAP = 3;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
-const SIDE_STROKE: Record<SideKey, string> = { a: "var(--orange)", b: "var(--primary)" };
+// The larger amount is always blue, the other orange (see `sideTone`).
+const TONE_STROKE = { lead: "var(--primary)", other: "var(--orange)" } as const;
 
 export function ShareOfAmountCard({
   a,
@@ -56,6 +57,7 @@ function ShareBody({
     { side: "b", length: lengthB, offset: lengthA },
   ];
 
+  const amountLeader = gapBetween(a.amount, b.amount).leader;
   const leader = share.a >= share.b ? a : b;
   const leaderShare = Math.max(share.a, share.b);
   const takeaway = `${leader.name} brings ${leaderShare.toFixed(1)}% of the combined amount${
@@ -82,7 +84,7 @@ function ShareBody({
                   cy={SIZE / 2}
                   r={RADIUS}
                   fill="none"
-                  stroke={SIDE_STROKE[slice.side]}
+                  stroke={TONE_STROKE[sideTone(slice.side, amountLeader)]}
                   strokeWidth={STROKE}
                   strokeDasharray={`${Math.max(0, slice.length - (share.a > 0 && share.b > 0 ? GAP : 0))} ${CIRCUMFERENCE}`}
                   strokeDashoffset={-slice.offset}
@@ -102,7 +104,7 @@ function ShareBody({
             return (
               <li key={side}>
                 <p className="flex items-center gap-2 text-sm font-medium text-foreground-2">
-                  <span className={cn("size-2.5 shrink-0 rounded-full", SIDE_DOT_CLASS[side])} aria-hidden />
+                  <span className={cn("size-2.5 shrink-0 rounded-full", sideDotClass(side, amountLeader))} aria-hidden />
                   {figures.name}
                 </p>
                 <p className="text-2xl font-bold text-foreground tabular-nums">{share[side].toFixed(1)}%</p>

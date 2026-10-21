@@ -19,7 +19,7 @@ const CARD_CLASS =
 const TITLE_CLASS = "text-base font-semibold text-foreground";
 // Full numbers are long ("ETB 2,232,593,350.43"), so the size follows the card width (up to 32px) and always fits.
 const VALUE_CLASS =
-  "text-[length:min(32px,8cqi)] leading-tight font-bold whitespace-nowrap text-primary-display tabular-nums";
+  "text-[length:min(32px,8cqi)] leading-tight font-bold whitespace-nowrap text-primary tabular-nums";
 const DETAIL_CLASS = "text-[15px] text-muted-foreground tabular-nums max-[620px]:text-[13px]";
 
 /** How the caption above the top 5 describes each ranking. */

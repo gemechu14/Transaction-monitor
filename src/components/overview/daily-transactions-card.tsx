@@ -17,7 +17,7 @@ import { SectionCard } from "@/components/overview/section-card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useMediaQuery } from "@/hooks/use-media-query";
-import { formatNumber } from "@/lib/format";
+import { formatAxisTick, formatNumber } from "@/lib/format";
 import { formatEtb, formatLongDate, formatShortDate, niceAxisMax, type DailyPoint } from "@/lib/overview";
 
 type Metric = "count" | "value";
@@ -100,9 +100,14 @@ export function DailyTransactionsCard({
         </div>
       ) : (
         <>
-          <div className="h-[260px] w-full">
+          {/* The unit sits once above the axis, so the tick labels stay short and never wrap. */}
+          <p className="mb-1 text-[11px] font-medium text-muted-foreground">
+            {metric === "count" ? "Transactions" : "ETB"}
+          </p>
+          {/* No focus box around the chart after a click. */}
+          <div className="h-[260px] w-full [&_.recharts-surface]:outline-none [&_.recharts-wrapper]:outline-none">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={rows} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+              <AreaChart data={rows} margin={{ top: 8, right: 24, left: 0, bottom: 0 }}>
                 <defs>
                   <linearGradient id="daily-area" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="var(--primary)" stopOpacity={0.22} />
@@ -121,11 +126,13 @@ export function DailyTransactionsCard({
                 <YAxis
                   domain={[0, yMax]}
                   ticks={yTicks}
-                  tickFormatter={format}
+                  // Compact ticks ("200M") so they fit at any width; the unit is shown above the
+                  // chart, and the tooltip and the line below give full figures.
+                  tickFormatter={(value: number) => formatAxisTick(value)}
                   tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
                   axisLine={false}
                   tickLine={false}
-                  width={metric === "count" ? 44 : 70}
+                  width={44}
                 />
                 <Tooltip
                   cursor={{ stroke: "var(--muted-foreground)", strokeDasharray: "4 4" }}
@@ -133,7 +140,8 @@ export function DailyTransactionsCard({
                 />
                 <ReferenceLine
                   y={average}
-                  stroke="var(--orange)"
+                  // Neutral grey: the average is a reference, not a warning.
+                  stroke="var(--muted-foreground)"
                   strokeWidth={1.5}
                   strokeDasharray="5 4"
                   label={(props: { viewBox?: { x: number; y: number; width: number } }) => (
@@ -145,7 +153,8 @@ export function DailyTransactionsCard({
                   dataKey="value"
                   stroke="var(--primary)"
                   strokeWidth={2.6}
-                  fill="url(#daily-area)"
+                  // Line only: the shaded area under it is off. Use fill="url(#daily-area)" to bring it back.
+                  fill="none"
                   dot={rows.length === 1 ? { r: 5, fill: "var(--primary)", strokeWidth: 0 } : false}
                   activeDot={{ r: 5, fill: "#ffffff", stroke: "var(--primary)", strokeWidth: 2.5 }}
                   isAnimationActive={animate && !reducedMotion}
@@ -191,8 +200,8 @@ function AverageLabel({
         width={width}
         height={22}
         rx={11}
-        fill="var(--orange-soft)"
-        stroke="var(--orange)"
+        fill="var(--muted)"
+        stroke="var(--border)"
       />
       <text
         x={x + width / 2}
@@ -200,7 +209,7 @@ function AverageLabel({
         textAnchor="middle"
         fontSize={11}
         fontWeight={600}
-        fill="var(--orange-strong)"
+        fill="var(--foreground-2, var(--foreground))"
       >
         {text}
       </text>

@@ -14,7 +14,8 @@ export const REPORT_LOGO_PATH = "/coop-bank-logo.png";
 export const REPORT_LOGO_ASPECT = 724 / 308;
 
 export const REPORT_COLORS = {
-  primary: "#00ADEF",
+  // Brand blue at 80%, flattened on white (writers need solid hex).
+  primary: "#33BDF2",
   secondary: "#FF8A29",
   accentText: "#0076A3",
   ink: "#1A2733",
@@ -28,7 +29,7 @@ export const REPORT_COLORS = {
   negative: "#C62828",
   /** Side A / side B on the Comparison page: orange and blue, as on screen. */
   sideA: "#FF8A29",
-  sideB: "#00ADEF",
+  sideB: "#33BDF2",
   calloutFill: "#F2FAFE",
 };
 

@@ -164,7 +164,7 @@ export default function LoginPage() {
 
             <button
               type="submit"
-              className="flex h-12 w-full items-center justify-center gap-2 rounded-[12px] bg-[var(--l-primary)] text-[15px] font-bold text-[var(--l-primary-ink)] outline-none transition-[filter,box-shadow] hover:brightness-95 focus-visible:ring-[3px] focus-visible:ring-[var(--l-primary-soft)] disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:brightness-100"
+              className="flex h-12 w-full items-center justify-center gap-2 rounded-[12px] bg-[var(--l-primary)] text-[15px] font-bold text-white outline-none transition-[filter,box-shadow] hover:brightness-95 focus-visible:ring-[3px] focus-visible:ring-[var(--l-primary-soft)] disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:brightness-100"
               disabled={isSubmitting || isLocked}
             >
               {isSubmitting ? (

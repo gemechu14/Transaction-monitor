@@ -3,11 +3,19 @@
 import { SectionCard } from "@/components/overview/section-card";
 import { WSO2_SOURCE_LABELS } from "@/config/wso2-sources";
 import type { DateRange } from "@/lib/date";
-import { formatEtb, formatRangeLabel, type SourceRow } from "@/lib/overview";
+import { formatAmountValue } from "@/lib/format";
+import { formatFullRangeLabel, type SourceRow } from "@/lib/overview";
 
 /** Sources named in the bar and tiles; the rest are added up into Others. */
 const TOP_COUNT = 3;
-const COLORS = ["var(--primary)", "var(--value-mix-2)", "var(--orange)", "var(--reversed)"];
+// Ranked parts of a whole: one blue, strongest for the largest share and lighter
+// for each next one, ending with Others as the palest step (as in the donut card).
+const COLORS = [
+  "var(--primary)",
+  "color-mix(in srgb, var(--primary) 62%, transparent)",
+  "color-mix(in srgb, var(--primary) 38%, transparent)",
+  "color-mix(in srgb, var(--primary) 20%, transparent)",
+];
 
 interface Segment {
   key: string;
@@ -102,7 +110,7 @@ export function ValueMixCard({
   const leader = segments[0];
 
   return (
-    <SectionCard title="Value by source" description={`Share of total amount, ${formatRangeLabel(range)}`}>
+    <SectionCard title="Share of value" description={`Share of total value in ETB, ${formatFullRangeLabel(range)}`}>
       {isLoading ? (
         <LoadingState />
       ) : data.length === 0 || total === 0 ? (
@@ -137,7 +145,7 @@ export function ValueMixCard({
                 </p>
                 <p className={TILE_VALUE_CLASS}>
                   {formatShare(pct(segment.amount))}
-                  <span className="ml-1.5 text-xs font-normal text-muted-foreground">({formatEtb(segment.amount)})</span>
+                  <span className="ml-1.5 text-xs font-normal text-muted-foreground">({formatAmountValue(segment.amount)})</span>
                 </p>
               </li>
             ))}

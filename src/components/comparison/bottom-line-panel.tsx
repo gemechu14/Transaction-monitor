@@ -1,10 +1,17 @@
 "use client";
 
+import { sideTone, type SideLeader, type SideTone } from "@/components/comparison/comparison-filter-bar";
 import { ShimmerLine } from "@/components/ui/shimmer-line";
-import type { BottomLine, SideKey } from "@/lib/comparison";
+import type { BottomLine } from "@/lib/comparison";
 import { cn } from "@/lib/utils";
 
-const NAME_CLASS: Record<SideKey, string> = { a: "text-orange-strong", b: "text-primary-strong" };
+/** The sentence names the leader first ("X processed 2.2× the amount of Y"). */
+function leaderOf(line: BottomLine): SideLeader {
+  return line.parts.find((part) => part.side)?.side ?? null;
+}
+
+// The larger amount is always blue, the other orange (see `sideTone`).
+const TONE_NAME_CLASS: Record<SideTone, string> = { lead: "text-primary-strong", other: "text-orange-strong" };
 
 /** The one-sentence answer on amount. Announced to screen readers when it changes. */
 export function BottomLinePanel({ line, isLoading }: { line: BottomLine | null; isLoading?: boolean }) {
@@ -24,7 +31,7 @@ export function BottomLinePanel({ line, isLoading }: { line: BottomLine | null; 
         <>
           <p className="mt-1 text-xl leading-snug font-bold text-foreground max-[620px]:text-lg">
             {line.parts.map((part, index) => (
-              <span key={index} className={cn(part.side && NAME_CLASS[part.side])}>
+              <span key={index} className={cn(part.side && TONE_NAME_CLASS[sideTone(part.side, leaderOf(line))])}>
                 {part.text}
               </span>
             ))}

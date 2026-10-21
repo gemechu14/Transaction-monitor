@@ -5,7 +5,7 @@ import { Layers, X } from "lucide-react";
 
 // import { AnomalyFlagsCard } from "@/components/overview/anomaly-flags-card";
 import { ChannelPerformanceCard } from "@/components/overview/channel-performance-card";
-// import { DailyTransactionsCard } from "@/components/overview/daily-transactions-card";
+import { DailyTransactionsCard } from "@/components/overview/daily-transactions-card";
 import { DistributionByChannelCard } from "@/components/overview/distribution-card";
 // import { LatencyCard } from "@/components/overview/latency-card";
 import { OverviewKpiGrid } from "@/components/overview/overview-kpi-grid";
@@ -26,11 +26,12 @@ import { usePeriod } from "@/components/providers/period-provider";
 import type { ChannelId } from "@/config/channels";
 import { WSO2_SOURCE_LABELS, WSO2_SOURCES, type Wso2Source } from "@/config/wso2-sources";
 import { useAllAdvanced, useMe, useOverviewDataset } from "@/hooks";
+import { generateMockDailySeries } from "@/lib/mock/all-advanced-data";
 import {
   LIVE_KPI_IDS,
   applyLiveTotals,
-  // channelName, formatRangeLabel: used by the hidden daily chart
   computeOverview,
+  formatRangeLabel,
   pickSourceTotals,
   sourceRows,
 } from "@/lib/overview";
@@ -66,19 +67,22 @@ export default function OverviewPage() {
     totalsQuery.error?.message,
   );
   const platformLabel = WSO2_SOURCE_LABELS[source];
-  // Daily chart hidden until the backend has a per-day endpoint (see ADVANCED_API.md).
-  // const chartPlatformLabel = channel === "all" ? "All platforms" : channelName(channel);
-  // const chartSubtitle = `${chartPlatformLabel}, ${formatRangeLabel(period.range)}${
-  //   view?.clipped ? " (data available from 1 Sep)" : ""
-  // }`;
+  // The API has no per-day breakdown yet (see ADVANCED_API.md), so the daily
+  // chart runs on dummy days that add up to the dummy totals on the cards.
+  const dailySeries = useMemo(
+    () => generateMockDailySeries({ startDate: period.range.from, endDate: period.range.to }, source),
+    [period.range, source],
+  );
+  const chartSubtitle = `${platformLabel}, ${formatRangeLabel(period.range)}`;
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex min-w-0 flex-wrap items-center gap-2.5">
+          {/* Page title hidden for now.
           <h2 className="text-[22px] font-bold tracking-[-0.02em] text-foreground">
             Transaction monitoring overview
-          </h2>
+          </h2> */}
           <span className="inline-flex items-center gap-1.5 rounded-full bg-primary-soft py-1 pr-2 pl-2.5 text-xs font-medium text-primary-strong">
             <span className="size-1.5 shrink-0 rounded-full bg-primary" />
             {platformLabel}
@@ -142,23 +146,30 @@ export default function OverviewPage() {
         skeletonCount={isAdmin ? 6 : USER_VISIBLE_KPI_IDS.size}
       />
 
-      {/* Hidden until the backend has a per-day endpoint (see ADVANCED_API.md).
-      <DailyTransactionsCard series={view?.series ?? []} subtitle={chartSubtitle} isLoading={isLoading} /> */}
+      <DailyTransactionsCard series={dailySeries} subtitle={chartSubtitle} isLoading={totalsQuery.isPending} />
 
-      <ChannelPerformanceCard
-        data={sourceRows(totalsQuery.data)}
-        range={period.range}
-        selected={source}
-        isLoading={totalsQuery.isPending}
-        errorMessage={totalsQuery.error?.message}
-      />
+      {/* Side by side: one card ranks channels by value, the other by transactions. */}
+      <div className="grid grid-cols-1 gap-4 min-[1101px]:grid-cols-2">
+        {(["value", "volume"] as const).map((metric) => (
+          <ChannelPerformanceCard
+            key={metric}
+            metric={metric}
+            data={sourceRows(totalsQuery.data)}
+            range={period.range}
+            selected={source}
+            isLoading={totalsQuery.isPending}
+            errorMessage={totalsQuery.error?.message}
+          />
+        ))}
+      </div>
 
       {isAdmin && (
         <>
 
-          <div className="grid grid-cols-1 gap-3 min-[901px]:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 min-[1101px]:grid-cols-2">
             <DistributionByChannelCard
               data={sourceRows(totalsQuery.data)}
+              range={period.range}
               selected={source}
               onSelect={setSource}
               isLoading={totalsQuery.isPending}

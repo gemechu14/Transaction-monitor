@@ -10,7 +10,7 @@ const SHORT_LABEL_CLASS =
   "hidden font-semibold text-foreground max-[1640px]:block max-[1640px]:text-sm max-[620px]:text-[13px]";
 // Full numbers are long ("ETB 2,232,593,350.43"), so the size follows the card width (up to 32px) and always fits.
 const VALUE_CLASS =
-  "text-[length:min(32px,8cqi)] leading-tight font-bold whitespace-nowrap text-primary-display tabular-nums";
+  "text-[length:min(32px,8cqi)] leading-tight font-bold whitespace-nowrap text-primary tabular-nums";
 const DETAIL_CLASS = "text-[15px] text-muted-foreground tabular-nums max-[620px]:text-[13px]";
 
 function KpiLabel({ kpi }: { kpi: Pick<OverviewKpi, "label" | "shortLabel"> }) {
