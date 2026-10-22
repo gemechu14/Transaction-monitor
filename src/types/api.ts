@@ -1,6 +1,6 @@
 import type { ChannelId } from "@/config/channels";
 import type { TransactionStatus } from "@/config/status";
-import type { Wso2ChannelSource } from "@/config/wso2-sources";
+import type { Wso2ChannelSource, Wso2Source } from "@/config/wso2-sources";
 
 export interface PaginatedResponse<T> {
   data: T[];
@@ -263,3 +263,14 @@ export interface SourceTotals {
 
 /** `allAdvanced` data: one entry per WSO2 source. */
 export type AllAdvancedTotals = Partial<Record<Wso2ChannelSource, SourceTotals>>;
+
+/** Query for the daily-transaction totals. Dates are "YYYY-MM-DD", inclusive. */
+export interface DailyTransactionParams {
+  startDate: string;
+  endDate: string;
+  /** Defaults to "all". */
+  source?: Wso2Source;
+}
+
+/** Daily-transaction data: one entry per "YYYY-MM-DD"; days without transactions may be missing. */
+export type DailyTransactionTotals = Record<string, SourceTotals>;

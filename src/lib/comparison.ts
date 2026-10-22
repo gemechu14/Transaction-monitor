@@ -2,7 +2,7 @@ import type { ChannelId } from "@/config/channels";
 import { WSO2_SOURCE_LABELS, type Wso2Source } from "@/config/wso2-sources";
 import { addDays, toISODate, type DateRange } from "@/lib/date";
 import { formatCurrency, formatNumber } from "@/lib/format";
-import { channelName, computeOverview, formatShortDate, pickSourceTotals } from "@/lib/overview";
+import { channelName, computeOverview, formatRangeLabel, formatShortDate, pickSourceTotals } from "@/lib/overview";
 import type { AllAdvancedTotals, OverviewDataset } from "@/types/api";
 
 /**
@@ -11,8 +11,16 @@ import type { AllAdvancedTotals, OverviewDataset } from "@/types/api";
  */
 
 export type ComparisonType = "channels" | "periods";
-export type Interval = "day" | "week" | "month";
+export type Interval = "day" | "week" | "month" | "quarter" | "half" | "custom";
 export type SideKey = "a" | "b";
+
+export const COMPARISON_TYPE_LABELS: Record<ComparisonType, string> = {
+  channels: "Channel comparison",
+  periods: "Period comparison",
+};
+
+/** The two sides of a period comparison: A is the baseline, B is measured against it. */
+export const PERIOD_SIDE_LABELS: Record<SideKey, string> = { a: "Base period", b: "Comparison period" };
 
 export interface PeriodOption {
   id: string;
@@ -28,7 +36,7 @@ export interface PeriodOption {
 export interface SideFigures {
   /** Panel name, e.g. "Telebirr" or "29 Sep". */
   name: string;
-  /** Small line under the name, e.g. "All platforms" on the Period over period tab. */
+  /** Small line under the name, e.g. "All platforms" on the Period comparison tab. */
   caption?: string;
   /** `null` when the figure isn't available (e.g. August for some channels). */
   amount: number | null;
@@ -243,7 +251,7 @@ export function channelInsights(
       id: "share",
       title: "Share of the business",
       text:
-        `${a.name} carries ${pct(shareA)} of all value and ${pct(a.transactions / totals.transactions)} of all transactions. ` +
+        `${a.name} carries ${pct(shareA)} of the total amount and ${pct(a.transactions / totals.transactions)} of all transactions. ` +
         `${b.name} carries ${pct(shareB)} and ${pct(b.transactions / totals.transactions)}. ` +
         `Together they handle ${Math.round((shareA + shareB) * 100)}% of the value.`,
     });
@@ -372,8 +380,13 @@ export function sideName(channel: ChannelId | "all"): string {
 
 /* ---------- live periods and figures (WSO2 allAdvanced) ---------- */
 
-/** How many choices each interval offers, counting back from yesterday. */
-const LIVE_OPTION_COUNT: Record<Interval, number> = { day: 30, week: 8, month: 6 };
+/** Earliest day the Comparison page lets anyone pick, "YYYY-MM-DD". */
+export const EARLIEST_DAY = "2025-01-01";
+
+/** How many choices each interval offers, counting back from yesterday. Custom ranges have no list. */
+const LIVE_OPTION_COUNT: Record<Interval, number> = { day: 30, week: 8, month: 6, quarter: 8, half: 4, custom: 0 };
+
+const SHORT_MONTHS = MONTHS.map((m) => m.slice(0, 3));
 
 function weekLabel(from: string, to: string): string {
   return from.slice(0, 7) === to.slice(0, 7)
@@ -383,12 +396,38 @@ function weekLabel(from: string, to: string): string {
 
 /**
  * Real calendar periods for the live API, oldest first: the last 30 days, the
- * last 8 full weeks (Mon – Sun) or the last 6 full months. Today, the current
- * week and the current month are left out, since they're still partial.
+ * last 8 full weeks (Mon – Sun), the last 6 full months, the last 8 full
+ * quarters or the last 4 full half-years. The current, still partial, period
+ * is left out, and so is any period starting before `EARLIEST_DAY`. Custom
+ * ranges are picked with date fields, so they have no list.
  */
 export function buildLivePeriodOptions(interval: Interval, today: Date = new Date()): PeriodOption[] {
+  return allLivePeriodOptions(interval, today).filter((o) => o.range.from >= EARLIEST_DAY);
+}
+
+function allLivePeriodOptions(interval: Interval, today: Date): PeriodOption[] {
   const count = LIVE_OPTION_COUNT[interval];
   const options: PeriodOption[] = [];
+
+  if (interval === "quarter" || interval === "half") {
+    // Calendar quarters (Q1 = Jan – Mar) or halves (H1 = Jan – Jun).
+    const months = interval === "quarter" ? 3 : 6;
+    const prefix = interval === "quarter" ? "Q" : "H";
+    const currentStart = today.getMonth() - (today.getMonth() % months);
+    for (let i = count; i >= 1; i--) {
+      const first = new Date(today.getFullYear(), currentStart - months * i, 1);
+      const last = new Date(first.getFullYear(), first.getMonth() + months, 0);
+      const from = toISODate(first);
+      const name = `${prefix}${first.getMonth() / months + 1} ${first.getFullYear()}`;
+      options.push({
+        id: from,
+        label: `${name} (${SHORT_MONTHS[first.getMonth()]} – ${SHORT_MONTHS[last.getMonth()]})`,
+        shortLabel: name,
+        range: { from, to: toISODate(last) },
+      });
+    }
+    return options;
+  }
 
   if (interval === "day") {
     for (let i = count; i >= 1; i--) options.push(dayOption(toISODate(addDays(today, -i))));
@@ -424,6 +463,18 @@ export function buildLivePeriodOptions(interval: Interval, today: Date = new Dat
 /** A single day as a period, e.g. for the Day interval's date pickers. `iso` is "YYYY-MM-DD". */
 export function dayOption(iso: string): PeriodOption {
   return { id: iso, label: `${weekday(iso)} ${formatShortDate(iso)}`, shortLabel: formatShortDate(iso), range: { from: iso, to: iso } };
+}
+
+/** Any date range as a period, for the Custom interval, e.g. "1 – 14 Sep 2026". */
+export function rangeOption(range: DateRange): PeriodOption {
+  const label = formatRangeLabel(range);
+  return { id: `${range.from}_${range.to}`, label, shortLabel: label, range };
+}
+
+/** Custom interval defaults: the last 7 complete days against the 7 days before them. */
+export function defaultCustomRanges(today: Date = new Date()): { a: DateRange; b: DateRange } {
+  const day = (offset: number) => toISODate(addDays(today, offset));
+  return { a: { from: day(-14), to: day(-8) }, b: { from: day(-7), to: day(-1) } };
 }
 
 /** The latest whole day: yesterday (today is still partial). */

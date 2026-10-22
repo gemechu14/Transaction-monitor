@@ -55,7 +55,7 @@ function failureRate(summary: ChannelSummary): number {
 }
 
 function downloadPlatformCsv(rows: PlatformRow[]) {
-  const header = ["Platform", "Transactions", "Value", "Change", "Success rate"];
+  const header = ["Platform", "Transactions", "Amount", "Change", "Success rate"];
   const lines = rows.map((row) =>
     [
       CHANNELS[row.channel]?.name ?? row.channel,
@@ -194,7 +194,7 @@ export default function ReportsPage() {
       title: "Business impact",
       body: `${formatNumber(totalCount)} transactions moved ${formatCurrency(
         totalValueSum
-      )} in the selected scope. Average ticket value was ${formatCurrency(avgTicket)}.`,
+      )} in the selected scope. Average transaction amount was ${formatCurrency(avgTicket)}.`,
     },
     {
       icon: ShieldCheck,
@@ -382,13 +382,13 @@ export default function ReportsPage() {
               isLoading={isLoading}
             />
             <ReportStatTile
-              label="Incoming value (ETB)"
+              label="Incoming amount (ETB)"
               value={formatAmountValue(incomingValueTotal)}
               helperText={`${formatNumber(incomingCountTotal)} transactions`}
               isLoading={isLoading}
             />
             <ReportStatTile
-              label="Outgoing value (ETB)"
+              label="Outgoing amount (ETB)"
               value={formatAmountValue(outgoingValueTotal)}
               helperText={`${formatNumber(outgoingCountTotal)} transactions`}
               isLoading={isLoading}

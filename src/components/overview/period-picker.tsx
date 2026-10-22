@@ -19,12 +19,15 @@ export function PeriodPicker({
   value,
   onChange,
   dataFrom,
+  minDate,
   size = "default",
 }: {
   value: OverviewPeriod;
   onChange: (period: OverviewPeriod) => void;
   /** First day with data; earlier days stay pickable. */
   dataFrom?: string;
+  /** Earliest pickable day, "YYYY-MM-DD"; nothing before it can be applied. */
+  minDate?: string;
   /** "sm" is the 40px control used inside filter bars. */
   size?: "default" | "sm";
 }) {
@@ -55,7 +58,8 @@ export function PeriodPicker({
   const reversed = !!draftFrom && !!draftTo && draftTo < draftFrom;
   const selectedDays = draftFrom && draftTo && !reversed ? countDays({ from: draftFrom, to: draftTo }) : 0;
   const tooLong = selectedDays > MAX_CUSTOM_DAYS;
-  const canApply = !!draftFrom && !!draftTo && !reversed && !tooLong;
+  const tooEarly = !!minDate && !!draftFrom && draftFrom < minDate;
+  const canApply = !!draftFrom && !!draftTo && !reversed && !tooLong && !tooEarly;
 
   function apply() {
     if (!canApply || !draftFrom || !draftTo) return;
@@ -162,8 +166,8 @@ export function PeriodPicker({
 
             <div className="space-y-2">
               {[
-                { label: "Start date", value: draftFrom, onChange: setDraftFrom, min: undefined, max: draftTo ?? today },
-                { label: "End date", value: draftTo, onChange: setDraftTo, min: draftFrom ?? undefined, max: today },
+                { label: "Start date", value: draftFrom, onChange: setDraftFrom, min: minDate, max: draftTo ?? today },
+                { label: "End date", value: draftTo, onChange: setDraftTo, min: draftFrom ?? minDate, max: today },
               ].map((field) => (
                 <label key={field.label} className="block">
                   <span className="mb-1 block text-[10px] font-semibold tracking-wide text-muted-foreground uppercase">
@@ -181,12 +185,14 @@ export function PeriodPicker({
               ))}
             </div>
             <p
-              className={cn("mt-2 text-[11px]", tooLong || reversed ? "text-bad" : "text-muted-foreground")}
+              className={cn("mt-2 text-[11px]", tooLong || reversed || tooEarly ? "text-bad" : "text-muted-foreground")}
               aria-live="polite"
             >
               {reversed
                 ? "End date must be on or after the start date"
-                : tooLong
+                : tooEarly && minDate
+                  ? `Start date can't be before ${formatLongDate(minDate)}`
+                  : tooLong
                   ? `Pick ${MAX_CUSTOM_DAYS} days or fewer`
                   : !draftFrom
                     ? "Choose a start date"

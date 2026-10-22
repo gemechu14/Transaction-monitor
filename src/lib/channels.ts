@@ -2,7 +2,7 @@ import type { ChannelId } from "@/config/channels";
 import { WSO2_SOURCE_LABELS, type Wso2ChannelSource } from "@/config/wso2-sources";
 import type { DateRange } from "@/lib/date";
 import { formatCurrency } from "@/lib/format";
-import { channelName, computeOverview, type SourceRow } from "@/lib/overview";
+import { channelName, computeOverview, type DailyPoint, type SourceRow } from "@/lib/overview";
 import type { OverviewDataset } from "@/types/api";
 
 /**
@@ -15,7 +15,7 @@ export type RankMetric = "transactions" | "value" | "success" | "latency";
 
 export const RANK_ITEMS: Record<RankMetric, string> = {
   transactions: "Rank by transactions",
-  value: "Rank by value",
+  value: "Rank by amount",
   success: "Rank by success rate",
   latency: "Rank by latency",
 };
@@ -174,13 +174,37 @@ export function computeChannels(
   };
 }
 
+/**
+ * Table rows from a live daily series. The daily-transaction API has no status
+ * split, so `failed` and `successRate` are placeholders; both columns are hidden.
+ */
+export function liveDayRows(series: DailyPoint[]): DayRow[] {
+  return series.map((d) => {
+    const weekday = weekdayOf(d.date);
+    return {
+      date: d.date,
+      weekday: WEEKDAYS[weekday],
+      weekend: weekday === 0 || weekday === 6,
+      count: d.count,
+      value: d.value,
+      avgTicket: d.count ? d.value / d.count : 0,
+      failed: 0,
+      successRate: 1,
+    };
+  });
+}
+
 export type Granularity = "day" | "week" | "month";
 
-/** Week and month grouping are offered once the period spans about four weeks. */
-const GROUPING_MIN_DAYS = 28;
-
-export function availableGranularities(periodDays: number): Granularity[] {
-  return periodDays >= GROUPING_MIN_DAYS ? ["day", "week", "month"] : ["day"];
+/**
+ * Weekly is offered from a week up; monthly from about a month, or from a week when the
+ * period starts on the 1st ("This month" so far).
+ */
+export function availableGranularities(range: DateRange, periodDays: number): Granularity[] {
+  const options: Granularity[] = ["day"];
+  if (periodDays >= 7) options.push("week");
+  if (periodDays >= 28 || (periodDays >= 7 && range.from.endsWith("-01"))) options.push("month");
+  return options;
 }
 
 /** One row of the day-by-day table: a single day, a calendar week (Mon – Sun) or a calendar month. */
@@ -276,9 +300,9 @@ export function groupDays(rows: DayRow[], granularity: Granularity): PeriodRow[]
 export type LiveRankMetric = "value" | "transactions" | "avgTicket";
 
 export const LIVE_RANK_ITEMS: Record<LiveRankMetric, string> = {
-  value: "Rank by value",
+  value: "Rank by amount",
   transactions: "Rank by transactions",
-  avgTicket: "Rank by avg ticket",
+  avgTicket: "Rank by avg amount",
   // success: "Rank by success rate",
   // latency: "Rank by latency",
 };

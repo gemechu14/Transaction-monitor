@@ -25,12 +25,12 @@ import {
 import { usePeriod } from "@/components/providers/period-provider";
 import type { ChannelId } from "@/config/channels";
 import { WSO2_SOURCE_LABELS, WSO2_SOURCES, type Wso2Source } from "@/config/wso2-sources";
-import { useAllAdvanced, useMe, useOverviewDataset } from "@/hooks";
-import { generateMockDailySeries } from "@/lib/mock/all-advanced-data";
+import { useAllAdvanced, useDailyTransaction, useMe, useOverviewDataset } from "@/hooks";
 import {
   LIVE_KPI_IDS,
   applyLiveTotals,
   computeOverview,
+  dailySeries,
   formatRangeLabel,
   pickSourceTotals,
   sourceRows,
@@ -67,12 +67,9 @@ export default function OverviewPage() {
     totalsQuery.error?.message,
   );
   const platformLabel = WSO2_SOURCE_LABELS[source];
-  // The API has no per-day breakdown yet (see ADVANCED_API.md), so the daily
-  // chart runs on dummy days that add up to the dummy totals on the cards.
-  const dailySeries = useMemo(
-    () => generateMockDailySeries({ startDate: period.range.from, endDate: period.range.to }, source),
-    [period.range, source],
-  );
+  // Same query (and cache) as the Channels day-by-day table.
+  const dailyQuery = useDailyTransaction({ startDate: period.range.from, endDate: period.range.to, source });
+  const series = useMemo(() => dailySeries(dailyQuery.data, period.range), [dailyQuery.data, period.range]);
   const chartSubtitle = `${platformLabel}, ${formatRangeLabel(period.range)}`;
 
   return (
@@ -146,7 +143,14 @@ export default function OverviewPage() {
         skeletonCount={isAdmin ? 6 : USER_VISIBLE_KPI_IDS.size}
       />
 
-      <DailyTransactionsCard series={dailySeries} subtitle={chartSubtitle} isLoading={totalsQuery.isPending} />
+      <DailyTransactionsCard
+        series={series}
+        subtitle={chartSubtitle}
+        emptyMessage={
+          dailyQuery.error ? `Daily figures unavailable: ${dailyQuery.error.message}` : "No transactions in this period."
+        }
+        isLoading={dailyQuery.isPending}
+      />
 
       {/* Side by side: one card ranks channels by value, the other by transactions. */}
       <div className="grid grid-cols-1 gap-4 min-[1101px]:grid-cols-2">
@@ -157,6 +161,7 @@ export default function OverviewPage() {
             data={sourceRows(totalsQuery.data)}
             range={period.range}
             selected={source}
+            onSelect={setSource}
             isLoading={totalsQuery.isPending}
             errorMessage={totalsQuery.error?.message}
           />

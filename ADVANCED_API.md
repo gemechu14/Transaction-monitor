@@ -7,7 +7,7 @@ For login, session, CORS and the rest of the TM backend, see [FRONTEND_INTEGRATI
 ## WSO2 endpoint
 
 ```
-GET {{baseUrl}}/wso2Dashboard/allAdvanced?startDate={{startDate}}&endDate={{endDate}}&source=all
+GET {{baseUrl}}/wso2DashboardAPI/allAdvanced?startDate={{startDate}}&endDate={{endDate}}&source=all
 ```
 
 | Param | Format |
@@ -21,7 +21,7 @@ GET {{baseUrl}}/wso2Dashboard/allAdvanced?startDate={{startDate}}&endDate={{endD
 ## How the frontend reaches it
 
 ```
-Browser ──► /api/dashboard/all-advanced (TM backend, session cookie) ──► WSO2 /wso2Dashboard/allAdvanced
+Browser ──► /api/dashboard/all-advanced (TM backend, session cookie) ──► WSO2 /wso2DashboardAPI/allAdvanced
 ```
 
 - The frontend calls `GET /api/dashboard/all-advanced?startDate=&endDate=&source=all` with `credentials: "include"`.

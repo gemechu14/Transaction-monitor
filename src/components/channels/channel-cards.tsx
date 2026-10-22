@@ -24,9 +24,9 @@ const DETAIL_CLASS = "text-[15px] text-muted-foreground tabular-nums max-[620px]
 
 /** How the caption above the top 5 describes each ranking. */
 const RANK_CAPTION: Record<LiveRankMetric, string> = {
-  value: "highest value",
+  value: "highest amount",
   transactions: "most transactions",
-  avgTicket: "highest average ticket",
+  avgTicket: "highest average amount",
   // success: "highest success rate",
   // latency: "slowest response time",
 };
@@ -163,9 +163,9 @@ export function ChannelFocusGrid({
   return (
     <div className={GRID_CLASS}>
       <StatCard
-        title="Total value (ETB)"
+        title="Total amount (ETB)"
         value={formatAmountValue(selected.value)}
-        detail={`${(selected.valueShare * 100).toFixed(1)}% of all value`}
+        detail={`${(selected.valueShare * 100).toFixed(1)}% of the total amount`}
       />
       <StatCard
         title="Transactions"
@@ -184,9 +184,9 @@ export function ChannelFocusGrid({
         detail="of all transactions"
       />
       <StatCard
-        title="Avg ticket (ETB)"
+        title="Average per transaction (ETB)"
         value={formatAmountValue(selected.avgTicket)}
-        detail={`All sources average ${formatEtb(platform.avgTicket)}`}
+        detail={`${formatEtb(platform.avgTicket)} across all sources`}
       />
       {/* <StatCard
         title="Avg latency"
@@ -199,9 +199,9 @@ export function ChannelFocusGrid({
 
 export function RankChips({ ranks, total }: { ranks: SourceRanks; total: number }) {
   const chips = [
-    { rank: ranks.value, label: "by value" },
+    { rank: ranks.value, label: "by amount" },
     { rank: ranks.transactions, label: "by transactions" },
-    { rank: ranks.avgTicket, label: "by avg ticket" },
+    { rank: ranks.avgTicket, label: "by avg amount" },
     // { rank: ranks.success, label: "by success rate" },
     // { rank: ranks.fastest, label: "fastest" },
   ];

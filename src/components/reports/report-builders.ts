@@ -11,6 +11,7 @@ import {
 } from "@/lib/channels";
 import {
   avgPayment,
+  COMPARISON_TYPE_LABELS,
   formatAmount,
   gapBetween,
   shareOfAmount,
@@ -89,15 +90,15 @@ export function buildOverviewReport(
 
   const performance: ReportTable = {
     title: "Channel performance",
-    note: "Live totals per source, ranked by value",
+    note: "Live totals per source, ranked by amount",
     pdf: true,
     columns: [
       { header: "Source", kind: "text", width: 1.6 },
       { header: "Transactions", kind: "count" },
-      { header: "Value (ETB)", kind: "etb" },
-      { header: "Avg ticket (ETB)", kind: "etbRound" },
+      { header: "Amount (ETB)", kind: "etb" },
+      { header: "Avg amount (ETB)", kind: "etbRound" },
       { header: "Share of transactions", kind: "percent" },
-      { header: "Share of value", kind: "percent" },
+      { header: "Share of amount", kind: "percent" },
     ],
     rows: sorted.map((r) => [
       WSO2_SOURCE_LABELS[r.source],
@@ -155,10 +156,10 @@ export function buildChannelsReport(
     columns: [
       { header: "Channel", kind: "text", width: 1.6 },
       { header: "Transactions", kind: "count" },
-      { header: "Value (ETB)", kind: "etb" },
+      { header: "Amount (ETB)", kind: "etb" },
       { header: "Success rate", kind: "percent" },
       { header: "Avg latency (ms)", kind: "ms" },
-      { header: "Avg ticket (ETB)", kind: "etbRound" },
+      { header: "Avg amount (ETB)", kind: "etbRound" },
       { header: "Share", kind: "percent" },
     ],
     rows: ranked.map((s) => [s.name, s.count, s.value, s.successRate, Math.round(s.avgLatencyMs), s.avgTicket, s.share]),
@@ -166,15 +167,15 @@ export function buildChannelsReport(
   };
 
   const days: ReportTable = {
-    title: "Day by day",
+    title: "Daily summary",
     note: platformLabel,
     pdf: false,
     columns: [
       { header: "Date", kind: "text" },
       { header: "Day", kind: "text" },
       { header: "Transactions", kind: "count" },
-      { header: "Value (ETB)", kind: "etb" },
-      { header: "Avg ticket (ETB)", kind: "etbRound" },
+      { header: "Amount (ETB)", kind: "etb" },
+      { header: "Avg amount (ETB)", kind: "etbRound" },
       { header: "Failed / reversed", kind: "count" },
       { header: "Success rate", kind: "percent" },
     ],
@@ -199,9 +200,9 @@ export function buildChannelsReport(
               detail: `~ ${formatNumber(selected.perDay)} per day, rank ${selected.ranks.transactions} of ${view.stats.length}`,
             },
             {
-              label: "Transaction value",
+              label: "Transaction amount",
               value: formatEtb2(selected.value),
-              detail: `Avg ticket ${formatEtb(selected.avgTicket)}, rank ${selected.ranks.value} of ${view.stats.length}`,
+              detail: `Avg amount ${formatEtb(selected.avgTicket)}, rank ${selected.ranks.value} of ${view.stats.length}`,
             },
             {
               label: "Success rate",
@@ -322,9 +323,9 @@ export function buildComparisonReport(
       fileBase: `comparison-${fileSlug(channels.a)}-vs-${fileSlug(channels.b)}-${range.from}-${range.to}`,
       spec: {
         ...common,
-        eyebrow: "Channel vs channel",
+        eyebrow: COMPARISON_TYPE_LABELS.channels,
         periodLabel: formatFullRangeLabel(range),
-        scope: `Channel vs channel · ${formatRangeLabel(range)}`,
+        scope: `${COMPARISON_TYPE_LABELS.channels} · ${formatRangeLabel(range)}`,
       },
     };
   }
@@ -335,21 +336,21 @@ export function buildComparisonReport(
     fileBase: `comparison-${fileSlug(channel)}-${periods.a.range.from}-vs-${periods.b.range.from}`,
     spec: {
       ...common,
-      eyebrow: "Period over period",
+      eyebrow: COMPARISON_TYPE_LABELS.periods,
       periodLabel: `${periods.a.label} vs ${periods.b.label}`,
-      scope: `Period over period · ${platform}`,
+      scope: `${COMPARISON_TYPE_LABELS.periods} · ${platform}`,
       subtitle: `${periods.a.label} vs ${periods.b.label} · ${platform}`,
     },
   };
 }
 
-/* ---------- Day by day (Channels page table) ---------- */
+/* ---------- Daily / weekly / monthly summary (Channels page table) ---------- */
 
 export function buildDayByDayReport(
   input: {
     rows: PeriodRow[];
     granularity: Granularity;
-    /** "Day by day", "Week by week" or "Month by month". */
+    /** "Daily summary", "Weekly summary" or "Monthly summary". */
     title: string;
     channel: ChannelId | "all";
     platformLabel: string;
@@ -378,8 +379,8 @@ export function buildDayByDayReport(
             { header: "Days", kind: "count", width: 0.6 },
           ] as const)),
       { header: "Transactions", kind: "count" },
-      { header: "Value (ETB)", kind: "etb" },
-      { header: "Avg ticket (ETB)", kind: "etbRound" },
+      { header: "Amount (ETB)", kind: "etb" },
+      { header: "Avg amount (ETB)", kind: "etbRound" },
     ],
     rows: rows.map((r) => [
       ...(isDay ? [r.start, r.sublabel.split(",")[0]] : [r.label, r.days]),
@@ -406,12 +407,12 @@ export function buildDayByDayReport(
           detail: `~ ${formatNumber(rows.length ? count / rows.length : 0)} per ${unit}`,
         },
         {
-          label: "Total value",
+          label: "Total amount",
           value: formatEtb2(value),
           detail: `~ ${formatEtb2(rows.length ? value / rows.length : 0)} per ${unit}`,
         },
         {
-          label: "Average ticket",
+          label: "Average amount",
           value: formatEtb(count ? value / count : 0),
           detail: `Across ${rows.length} ${rows.length === 1 ? unit : `${unit}s`}`,
         },

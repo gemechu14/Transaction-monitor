@@ -24,25 +24,20 @@ import {
 import { usePeriod } from "@/components/providers/period-provider";
 import type { ChannelId } from "@/config/channels";
 import { WSO2_SOURCE_LABELS, WSO2_SOURCES, type Wso2Source } from "@/config/wso2-sources";
-import { useAllAdvanced, useOverviewDataset } from "@/hooks";
+import { useAllAdvanced, useDailyTransaction, useOverviewDataset } from "@/hooks";
 import {
   LIVE_RANK_ITEMS,
-  computeChannels,
   computeSourceStats,
+  liveDayRows,
   sourceRanks,
   type LiveRankMetric,
 } from "@/lib/channels";
-import {
-  countDays,
-  formatRangeLabel,
-  sourceRows,
-} from "@/lib/overview";
+import { countDays, dailySeries, sourceRows } from "@/lib/overview";
 
 export default function ChannelsPage() {
   // Shared across pages; kept until the user picks another period.
   const { period, setPeriod } = usePeriod();
-  // `source` drives the live cards. The day-by-day table is still sample data
-  // (a new API is coming), so it stays on all platforms for now.
+  // `source` drives the live cards and the day-by-day table.
   const [source, setSource] = useState<Wso2Source>("all");
   const channel: ChannelId | "all" = "all";
   // Every role ranks by value by default, matching the Overview.
@@ -53,24 +48,19 @@ export default function ChannelsPage() {
   const live = useMemo(() => computeSourceStats(sourceRows(totalsQuery.data)), [totalsQuery.data]);
   const selected = source === "all" ? undefined : live.stats.find((s) => s.source === source);
 
-  const datasetQuery = useOverviewDataset();
-  const dataset = datasetQuery.data;
-  const isLoading = datasetQuery.isLoading || !dataset;
+  // Only for the period picker's earliest date.
+  const dataset = useOverviewDataset().data;
 
-  // The day-by-day table has no API yet and only sample data for one month, so it
-  // always shows that whole month (as it did before), not the picked period.
-  const tableRange = useMemo(
-    () => (dataset ? { from: dataset.from, to: dataset.to } : period.range),
-    [dataset, period.range],
+  const dailyQuery = useDailyTransaction({ startDate: period.range.from, endDate: period.range.to, source });
+  const days = useMemo(
+    () => liveDayRows(dailySeries(dailyQuery.data, period.range)),
+    [dailyQuery.data, period.range],
   );
-  const view = useMemo(
-    () => (dataset ? computeChannels(dataset, tableRange, channel) : undefined),
-    [dataset, tableRange, channel],
-  );
+  const daysEmptyMessage = dailyQuery.error
+    ? `Daily figures unavailable: ${dailyQuery.error.message}`
+    : "No transactions in this period.";
 
   const sourceLabel = WSO2_SOURCE_LABELS[source];
-  const platformLabel = "All platforms";
-  const dataNote = `of the sample data (${formatRangeLabel(tableRange)})`;
 
   return (
     // `inter-ui`: Inter at the same line height as the Overview channel cards.
@@ -159,13 +149,13 @@ export default function ChannelsPage() {
       )}
 
       <DayByDayCard
-        rows={view?.days ?? []}
+        rows={days}
         channel={channel}
-        platformLabel={platformLabel}
-        range={tableRange}
-        periodDays={countDays(tableRange)}
-        note={dataNote}
-        isLoading={isLoading}
+        platformLabel={sourceLabel}
+        range={period.range}
+        periodDays={countDays(period.range)}
+        emptyMessage={daysEmptyMessage}
+        isLoading={dailyQuery.isPending}
       />
     </div>
   );

@@ -9,6 +9,7 @@ export * from "@/hooks/use-channel-daily-flow";
 export * from "@/hooks/use-period-snapshot";
 export * from "@/hooks/use-overview-dataset";
 export * from "@/hooks/use-all-advanced";
+export * from "@/hooks/use-daily-transaction";
 export * from "@/hooks/use-auth";
 export * from "@/hooks/use-admin-users";
 export * from "@/hooks/use-media-query";

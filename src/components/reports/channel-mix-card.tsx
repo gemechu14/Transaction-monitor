@@ -23,7 +23,7 @@ export function ChannelMixCard({
         <p className="text-[10px] font-semibold tracking-wider text-primary uppercase">
           Channel mix
         </p>
-        <CardTitle>Where the value moved</CardTitle>
+        <CardTitle>Where the money moved</CardTitle>
       </CardHeader>
       <CardContent>
         {isLoading ? (

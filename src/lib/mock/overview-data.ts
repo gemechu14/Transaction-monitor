@@ -262,7 +262,7 @@ export function generateMockKpis(range: DateRange, channel?: ChannelId): Kpi[] {
   return [
     {
       id: "total-value",
-      label: "Total Transaction Value",
+      label: "Total Transaction Amount",
       value: totalValue,
       previousValue: prevTotalValue,
       change: change(totalValue, prevTotalValue),
@@ -317,7 +317,7 @@ export function generateMockKpis(range: DateRange, channel?: ChannelId): Kpi[] {
     },
     {
       id: "avg-value",
-      label: "Average Transaction Value",
+      label: "Average Transaction Amount",
       value: avgValue,
       previousValue: prevAvgValue,
       change: change(avgValue, prevAvgValue),

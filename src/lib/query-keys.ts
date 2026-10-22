@@ -3,6 +3,7 @@ import type {
   AnomalyParams,
   ChannelDailyFlowParams,
   ChannelSummaryParams,
+  DailyTransactionParams,
   KpiParams,
   PeakLoadParams,
   PeriodSnapshotParams,
@@ -30,4 +31,6 @@ export const queryKeys = {
     ["period-snapshot", params] as const,
   allAdvanced: (params: AllAdvancedParams) =>
     ["all-advanced", params] as const,
+  dailyTransaction: (params: DailyTransactionParams) =>
+    ["daily-transaction", params] as const,
 };

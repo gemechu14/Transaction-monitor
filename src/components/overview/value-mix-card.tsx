@@ -83,7 +83,7 @@ function LoadingState() {
           </li>
         ))}
       </ul>
-      <span className="sr-only">Loading value by source</span>
+      <span className="sr-only">Loading amount by source</span>
     </div>
   );
 }
@@ -110,7 +110,7 @@ export function ValueMixCard({
   const leader = segments[0];
 
   return (
-    <SectionCard title="Share of value" description={`Share of total value in ETB, ${formatFullRangeLabel(range)}`}>
+    <SectionCard title="Share of amount" description={`Share of total amount in ETB, ${formatFullRangeLabel(range)}`}>
       {isLoading ? (
         <LoadingState />
       ) : data.length === 0 || total === 0 ? (
@@ -122,7 +122,7 @@ export function ValueMixCard({
           <p className={HEADLINE_CLASS}>
             {formatShare(pct(leader.amount))}
             <span className="ml-2 align-middle text-sm font-normal text-muted-foreground">
-              of value via {leader.label}
+              of the amount via {leader.label}
             </span>
           </p>
 

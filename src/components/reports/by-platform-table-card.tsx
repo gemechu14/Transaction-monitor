@@ -46,7 +46,7 @@ export function ByPlatformTableCard({
     <Card>
       <CardHeader>
         <CardTitle>By platform</CardTitle>
-        <CardDescription>Traffic, value, period movement and reliability</CardDescription>
+        <CardDescription>Traffic, amount, period movement and reliability</CardDescription>
       </CardHeader>
       <CardContent>
         {isLoading ? (
@@ -57,7 +57,7 @@ export function ByPlatformTableCard({
               <TableRow>
                 <TableHead>Platform</TableHead>
                 <TableHead className="text-right">Transactions</TableHead>
-                <TableHead className="text-right">Value (ETB)</TableHead>
+                <TableHead className="text-right">Amount (ETB)</TableHead>
                 <TableHead className="text-right">Change</TableHead>
                 <TableHead className="text-right">Success</TableHead>
               </TableRow>

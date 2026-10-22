@@ -33,10 +33,13 @@ interface Row {
 export function DailyTransactionsCard({
   series,
   subtitle,
+  emptyMessage = "No data in this period.",
   isLoading,
 }: {
   series: DailyPoint[];
   subtitle: string;
+  /** Shown instead of the chart when there are no points, e.g. the API's error details. */
+  emptyMessage?: string;
   isLoading?: boolean;
 }) {
   const [metric, setMetric] = useState<Metric>("value");
@@ -95,8 +98,8 @@ export function DailyTransactionsCard({
       {isLoading ? (
         <Skeleton className="h-[260px] w-full" />
       ) : rows.length === 0 ? (
-        <div className="flex h-[260px] items-center justify-center rounded-xl bg-muted text-sm text-muted-foreground">
-          No data in this period. Data is available from 1 Sep 2026.
+        <div className="flex h-[260px] items-center justify-center rounded-xl bg-muted px-6 text-center text-sm text-muted-foreground">
+          {emptyMessage}
         </div>
       ) : (
         <>

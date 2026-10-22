@@ -14,15 +14,14 @@ import { useMediaQuery } from "@/hooks/use-media-query";
 import {
   // LOW_SUCCESS_RATE, // used by the Success column, hidden for now
   availableGranularities,
-  formatEtb2,
   groupDays,
   type DayRow,
   type Granularity,
   type PeriodRow,
 } from "@/lib/channels";
-import { formatNumber } from "@/lib/format";
+import { formatAmountValue, formatNumber } from "@/lib/format";
 import type { DateRange } from "@/lib/date";
-import { formatEtb, formatShortDate, niceAxisMax } from "@/lib/overview";
+import { formatShortDate, niceAxisMax } from "@/lib/overview";
 import { cn } from "@/lib/utils";
 
 type View = "table" | "chart";
@@ -31,20 +30,23 @@ type SortDir = "asc" | "desc";
 
 const VIEW_ITEMS: Record<View, string> = { table: "Table", chart: "Chart" };
 
-const GRANULARITY: Record<Granularity, { label: string; title: string; word: string; file: string }> = {
-  day: { label: "Day", title: "Day by day", word: "day", file: "daily" },
-  week: { label: "Week", title: "Week by week", word: "week", file: "weekly" },
-  month: { label: "Month", title: "Month by month", word: "month", file: "monthly" },
+const GRANULARITY: Record<
+  Granularity,
+  { label: string; option: string; title: string; word: string; file: string }
+> = {
+  day: { label: "Day", option: "Daily", title: "Daily summary", word: "day", file: "daily" },
+  week: { label: "Week", option: "Weekly", title: "Weekly summary", word: "week", file: "weekly" },
+  month: { label: "Month", option: "Monthly", title: "Monthly summary", word: "month", file: "monthly" },
 };
 
 const COLUMNS: { key: SortKey; label: string; align?: "right" }[] = [
   { key: "start", label: "Day" },
-  { key: "count", label: "Transactions", align: "right" },
-  { key: "value", label: "Value (ETB)", align: "right" },
-  { key: "avgTicket", label: "Avg ticket (ETB)", align: "right" },
+  { key: "value", label: "Amount (ETB)" },
+  { key: "count", label: "Transactions" },
+  { key: "avgTicket", label: "Avg amount (ETB)" },
   // Hidden for now; restore with the matching cells in DayTable.
-  // { key: "failed", label: "Failed / reversed", align: "right" },
-  // { key: "successRate", label: "Success", align: "right" },
+  // { key: "failed", label: "Failed / reversed" },
+  // { key: "successRate", label: "Success" },
 ];
 
 const TRIGGER_CLASS = "h-9 rounded-[10px] bg-card px-3 text-[13px] font-medium";
@@ -63,6 +65,7 @@ export function DayByDayCard({
   range,
   periodDays,
   note,
+  emptyMessage = "No data in this period.",
   isLoading,
 }: {
   rows: DayRow[];
@@ -70,18 +73,20 @@ export function DayByDayCard({
   platformLabel: string;
   /** Selected period, for the exported report. */
   range: DateRange;
-  /** Length of the selected period; decides whether week and month grouping are offered. */
+  /** Length of the selected period; decides whether weekly and monthly are offered. */
   periodDays: number;
   /** Replaces "in the selected period" in the subtitle, e.g. "of the sample data (1 – 30 Sep 2026)". */
   note?: string;
+  /** Shown instead of the table when there are no rows, e.g. the API's error details. */
+  emptyMessage?: string;
   isLoading?: boolean;
 }) {
   const [view, setView] = useState<View>("table");
   const [granularity, setGranularity] = useState<Granularity>("day");
   const [sort, setSort] = useState<{ key: SortKey; dir: SortDir }>({ key: "start", dir: "asc" });
 
-  const options = availableGranularities(periodDays);
-  // Falls back to days when the period gets too short, but keeps the choice for when it grows again.
+  const options = availableGranularities(range, periodDays);
+  // Falls back to daily when the period gets too short, but keeps the choice for when it grows again.
   const active = options.includes(granularity) ? granularity : "day";
   const meta = GRANULARITY[active];
 
@@ -101,25 +106,23 @@ export function DayByDayCard({
       description={`${platformLabel}, each ${meta.word} ${note ?? "in the selected period"}`}
       actions={
         <>
-          {options.length > 1 && (
-            <Select
-              items={Object.fromEntries(options.map((g) => [g, GRANULARITY[g].title]))}
-              value={active}
-              onValueChange={(value) => setGranularity(value as Granularity)}
-            >
-              <SelectTrigger aria-label="Group rows by" className={cn(TRIGGER_CLASS, "w-40")}>
-                <CalendarDays className="size-4 text-primary-strong" />
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {options.map((g) => (
-                  <SelectItem key={g} value={g}>
-                    {GRANULARITY[g].title}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
+          <Select
+            items={Object.fromEntries(options.map((g) => [g, GRANULARITY[g].option]))}
+            value={active}
+            onValueChange={(value) => setGranularity(value as Granularity)}
+          >
+            <SelectTrigger aria-label="Group rows by" className={cn(TRIGGER_CLASS, "w-32")}>
+              <CalendarDays className="size-4 text-primary-strong" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {options.map((g) => (
+                <SelectItem key={g} value={g}>
+                  {GRANULARITY[g].option}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Select items={VIEW_ITEMS} value={view} onValueChange={(value) => setView(value as View)}>
             <SelectTrigger aria-label="Table or chart" className={cn(TRIGGER_CLASS, "w-28")}>
               {view === "table" ? (
@@ -155,8 +158,8 @@ export function DayByDayCard({
           <Skeleton className="h-[360px] w-full rounded-xl" />
         </div>
       ) : rows.length === 0 ? (
-        <div className="flex h-[260px] items-center justify-center rounded-xl bg-muted text-sm text-muted-foreground">
-          No data in this period. Data is available from 1 Sep 2026.
+        <div className="flex h-[260px] items-center justify-center rounded-xl bg-muted px-6 text-center text-sm text-muted-foreground">
+          {emptyMessage}
         </div>
       ) : (
         <div className="space-y-4">
@@ -236,16 +239,16 @@ function DayTable({
                   {row.sublabel}
                 </p>
               </td>
-              <td className="px-5 text-right font-medium text-foreground">
+              <td className="px-5 font-semibold whitespace-nowrap text-foreground">
+                {formatAmountValue(row.value)}
+              </td>
+              <td className="px-5 font-medium text-foreground">
                 {Math.round(row.count).toLocaleString("en-US")}
               </td>
-              <td className="px-5 text-right font-semibold whitespace-nowrap text-foreground">
-                {formatEtb2(row.value)}
-              </td>
-              <td className="px-5 text-right whitespace-nowrap text-muted-foreground">{formatEtb(row.avgTicket)}</td>
+              <td className="px-5 whitespace-nowrap text-muted-foreground">{formatAmountValue(row.avgTicket)}</td>
               {/* Failed / reversed and Success are hidden for now.
-              <td className="px-5 text-right text-foreground">{Math.round(row.failed).toLocaleString("en-US")}</td>
-              <td className="px-5 text-right">{(row.successRate * 100).toFixed(1)}%</td> */}
+              <td className="px-5 text-foreground">{Math.round(row.failed).toLocaleString("en-US")}</td>
+              <td className="px-5">{(row.successRate * 100).toFixed(1)}%</td> */}
             </tr>
           ))}
         </tbody>
@@ -258,10 +261,10 @@ function DayTable({
                 {rows.length === 1 ? "" : "s"}
               </span>
             </td>
-            <td className="px-5 text-right">{Math.round(totals.count).toLocaleString("en-US")}</td>
-            <td className="px-5 text-right whitespace-nowrap">{formatEtb2(totals.value)}</td>
-            <td className="px-5 text-right whitespace-nowrap text-muted-foreground">
-              {formatEtb(totals.count ? totals.value / totals.count : 0)}
+            <td className="px-5 whitespace-nowrap">{formatAmountValue(totals.value)}</td>
+            <td className="px-5">{Math.round(totals.count).toLocaleString("en-US")}</td>
+            <td className="px-5 whitespace-nowrap text-muted-foreground">
+              {formatAmountValue(totals.count ? totals.value / totals.count : 0)}
             </td>
           </tr>
         </tfoot>

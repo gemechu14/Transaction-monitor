@@ -4,7 +4,8 @@ import { ArrowLeftRight, Rows3 } from "lucide-react";
 
 import { PeriodPicker } from "@/components/overview/period-picker";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import type { ComparisonType, Interval, SideKey } from "@/lib/comparison";
+import { COMPARISON_TYPE_LABELS, EARLIEST_DAY, type ComparisonType, type Interval, type SideKey } from "@/lib/comparison";
+import type { DateRange } from "@/lib/date";
 import type { OverviewPeriod } from "@/lib/overview";
 import { cn } from "@/lib/utils";
 
@@ -35,14 +36,17 @@ export interface FieldOption {
 }
 
 const TYPE_OPTIONS: { value: ComparisonType; label: string; icon: typeof ArrowLeftRight }[] = [
-  { value: "channels", label: "Channel vs channel", icon: ArrowLeftRight },
-  { value: "periods", label: "Period over period", icon: Rows3 },
+  { value: "channels", label: COMPARISON_TYPE_LABELS.channels, icon: ArrowLeftRight },
+  { value: "periods", label: COMPARISON_TYPE_LABELS.periods, icon: Rows3 },
 ];
 
-const INTERVAL_OPTIONS: { value: Interval; label: string }[] = [
-  { value: "day", label: "Day" },
-  { value: "week", label: "Week" },
-  { value: "month", label: "Month" },
+const INTERVAL_OPTIONS: FieldOption[] = [
+  { id: "day", label: "Daily" },
+  { id: "week", label: "Weekly" },
+  { id: "month", label: "Monthly" },
+  { id: "quarter", label: "Quarterly" },
+  { id: "half", label: "Half-yearly" },
+  { id: "custom", label: "Custom range" },
 ];
 
 /** Page-level switch between comparing two channels and one channel across two periods. */
@@ -85,8 +89,8 @@ export function ComparisonFilterBar({ children }: { children: React.ReactNode })
   );
 }
 
-/** Earliest day the date fields accept; anything older is a half-typed year. */
-const MIN_DAY = "2000-01-01";
+/** Earliest day the date fields accept; this also rejects half-typed years. */
+const MIN_DAY = EARLIEST_DAY;
 
 /** A date picker for one side, styled like `SideSelect`. */
 export function SideDateField({
@@ -207,25 +211,63 @@ export function SwapButton({ label, onClick }: { label: string; onClick: () => v
   );
 }
 
-export function IntervalSwitch({ value, onChange }: { value: Interval; onChange: (value: Interval) => void }) {
+export function IntervalSelect({ value, onChange }: { value: Interval; onChange: (value: Interval) => void }) {
   return (
-    <Field label="Interval">
-      <div className="inline-flex h-10 rounded-[10px] border border-border p-0.5" role="group" aria-label="Interval">
-        {INTERVAL_OPTIONS.map((option) => (
-          <button
-            key={option.value}
-            type="button"
-            aria-pressed={value === option.value}
-            onClick={() => onChange(option.value)}
-            className={cn(
-              "rounded-lg px-3.5 text-[13px] font-semibold focus-visible:outline-2 focus-visible:outline-primary max-[760px]:flex-1",
-              value === option.value ? "bg-primary-soft text-primary-strong" : "text-muted-foreground hover:bg-muted",
-            )}
-          >
-            {option.label}
-          </button>
-        ))}
-      </div>
+    <SideSelect label="Interval" value={value} options={INTERVAL_OPTIONS} onChange={(id) => onChange(id as Interval)} />
+  );
+}
+
+/** A from – to date range for one side, for the Custom range interval. */
+export function SideRangeField({
+  label,
+  side,
+  value,
+  max,
+  onChange,
+}: {
+  label: string;
+  side: SideKey;
+  value: DateRange;
+  /** Latest pickable day, "YYYY-MM-DD". */
+  max: string;
+  onChange: (range: DateRange) => void;
+}) {
+  const id = `side-range-${side}`;
+  const inputClass = "min-w-0 flex-1 bg-transparent text-sm font-semibold text-foreground tabular-nums outline-none";
+  // Same guards as `SideDateField`; the start can't pass the end, nor the end precede the start.
+  const accept = (next: string) => next && next >= MIN_DAY;
+  return (
+    <Field label={label} htmlFor={id}>
+      <span className="flex h-10 items-center gap-2 rounded-[10px] border border-border bg-card pr-2.5 pl-3 hover:border-foreground-2 focus-within:border-primary max-[760px]:w-full">
+        <input
+          id={id}
+          type="date"
+          aria-label={`${label} start`}
+          value={value.from}
+          min={MIN_DAY}
+          max={value.to}
+          onChange={(event) => {
+            const next = event.target.value;
+            if (accept(next)) onChange({ from: next > value.to ? value.to : next, to: value.to });
+          }}
+          className={inputClass}
+        />
+        <span className="text-muted-foreground" aria-hidden>
+          –
+        </span>
+        <input
+          type="date"
+          aria-label={`${label} end`}
+          value={value.to}
+          min={value.from}
+          max={max}
+          onChange={(event) => {
+            const next = event.target.value;
+            if (accept(next)) onChange({ from: value.from, to: next > max ? max : next < value.from ? value.from : next });
+          }}
+          className={inputClass}
+        />
+      </span>
     </Field>
   );
 }
@@ -241,7 +283,7 @@ export function PeriodField({
 }) {
   return (
     <Field label="Period">
-      <PeriodPicker value={value} onChange={onChange} dataFrom={dataFrom} size="sm" />
+      <PeriodPicker value={value} onChange={onChange} dataFrom={dataFrom} minDate={EARLIEST_DAY} size="sm" />
     </Field>
   );
 }

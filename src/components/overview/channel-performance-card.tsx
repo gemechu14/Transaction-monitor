@@ -29,11 +29,11 @@ type Metric = "volume" | "value" /* | "success" | "failure" */ | "avgTicket";
 export type ChannelMetric = Metric;
 
 const METRIC_OPTIONS: { value: Metric; label: string; hint: string; icon: LucideIcon }[] = [
-  { value: "value", label: "Value", hint: "Total amount in ETB", icon: Banknote },
+  { value: "value", label: "Amount", hint: "Total amount in ETB", icon: Banknote },
   { value: "volume", label: "Volume", hint: "Number of transactions", icon: ArrowLeftRight },
   // { value: "success", label: "Success", hint: "Success rate", icon: CircleCheck },
   // { value: "failure", label: "Failure", hint: "Failure rate", icon: CircleX },
-  { value: "avgTicket", label: "Avg ticket", hint: "Amount per transaction", icon: Receipt },
+  { value: "avgTicket", label: "Avg amount", hint: "Amount per transaction", icon: Receipt },
 ];
 
 const METRIC_LABELS = Object.fromEntries(METRIC_OPTIONS.map((o) => [o.value, o.label])) as Record<Metric, string>;
@@ -71,7 +71,7 @@ function formatSubtitleRange(range: DateRange): string {
 // CSV download hidden for now; restore together with the button below.
 // function downloadCsv(rows: SourceRow[]) {
 //   const total = rows.reduce((acc, r) => acc + r.totalTransactions, 0);
-//   const header = ["Source", "Transactions", "Value", "Avg ticket", "Share %"];
+//   const header = ["Source", "Transactions", "Amount", "Avg amount", "Share %"];
 //   const lines = rows.map((r) => {
 //     const avgTicket = r.totalTransactions ? Math.round(r.totalAmount / r.totalTransactions) : 0;
 //     const share = total ? ((r.totalTransactions / total) * 100).toFixed(2) : 0;
@@ -90,7 +90,7 @@ function formatSubtitleRange(range: DateRange): string {
  * Row layouts to compare; change LAYOUT to switch. Every layout ends in a single
  * bar with its figure printed just past the end, scaled to the largest row.
  *   1: condensed, name only (no rank, no context line, no dividers); the
- *      "40.2% of value · 55,632 txns" line shows on hover.
+ *      "40.2% of amount · 55,632 txns" line shows on hover.
  *   2: rank and name on one line, no context line, no dividers.
  *   3: full: rank, name with the context line under it, row dividers.
  */
@@ -132,7 +132,7 @@ function contextLine(row: SourceRow, metric: Metric, totals: SourceTotals): stri
     case "volume":
       return `${share(row.totalTransactions, totals.totalTransactions)} of transactions`;
     case "value":
-      return `${share(row.totalAmount, totals.totalAmount)} of value · ${formatNumber(row.totalTransactions)} txns`;
+      return `${share(row.totalAmount, totals.totalAmount)} of amount · ${formatNumber(row.totalTransactions)} txns`;
     case "avgTicket": {
       const overall = totals.totalTransactions ? totals.totalAmount / totals.totalTransactions : 0;
       if (!row.totalTransactions || !overall) return "No transactions";
@@ -144,9 +144,9 @@ function contextLine(row: SourceRow, metric: Metric, totals: SourceTotals): stri
 
 /** Card title per metric, so each card says what it ranks. */
 const TITLE: Record<Metric, string> = {
-  value: "Value",
+  value: "Amount",
   volume: "Transactions",
-  avgTicket: "Average ticket",
+  avgTicket: "Average amount",
 };
 
 /** Same rows and heights as the loaded card, so nothing shifts when data arrives. */
@@ -182,6 +182,7 @@ export function ChannelPerformanceCard({
   data,
   range,
   selected,
+  onSelect,
   isLoading,
   errorMessage,
   metric,
@@ -191,6 +192,8 @@ export function ChannelPerformanceCard({
   range: DateRange;
   /** The page's source dropdown: highlights that row and fades the rest. */
   selected: Wso2Source;
+  /** Sets the page's source, the same as the dropdown. */
+  onSelect: (source: Wso2Source) => void;
   isLoading?: boolean;
   errorMessage?: string;
   /** What the card ranks by: one card per metric on the page. */
@@ -286,56 +289,61 @@ export function ChannelPerformanceCard({
               const faded = selected !== "all" && !isSelected;
               const pct = max ? (value / max) * 100 : 0;
               return (
-                <li
-                  key={row.source}
-                  className={cn(
-                    ROW_CLASS,
-                    SHOW_DIVIDERS && "border-b border-line-soft last:border-b-0",
-                    isSelected && "-mx-2 rounded-[10px] border-transparent bg-(--rank-accent-soft) px-2",
-                  )}
-                >
-                  {SHOW_RANK && (
-                    <span className="text-right text-[12.5px] text-(--rank-muted) tabular-nums">{index + 1}</span>
-                  )}
-                  {SHOW_CONTEXT ? (
-                    <div className="min-w-0">
-                      <p className="truncate text-[13.5px] font-medium text-(--rank-text)">
-                        {WSO2_SOURCE_LABELS[row.source]}
-                      </p>
-                      <p className="truncate text-[11.5px] text-(--rank-muted) tabular-nums">
-                        {contextLine(row, metric, totals)}
-                      </p>
-                    </div>
-                  ) : (
-                    // No context line here; it shows on hover instead.
-                    <p
-                      className={cn("truncate text-[13px] text-(--rank-text)", faded && "text-(--rank-muted)")}
-                      title={contextLine(row, metric, totals)}
-                    >
-                      {WSO2_SOURCE_LABELS[row.source]}
-                    </p>
-                  )}
-                  {/* The bar fills the track minus room for its figure, which sits just past the bar's end. */}
-                  <div className={cn("min-w-0", BAR_CELL_CLASS)} style={{ paddingRight: LABEL_ROOM_PX }}>
-                    <div className="relative flex h-5 items-center">
-                      <span
-                        className={cn(
-                          "block h-3.5 rounded-[4px] bg-(--rank-accent) transition-[width] duration-[350ms] ease-[ease] motion-reduce:transition-none",
-                          faded && "opacity-30",
-                        )}
-                        style={{ width: `${Math.max(value > 0 ? 0.6 : 0, pct)}%` }}
-                      />
-                      <span
-                        className={cn(
-                          "absolute pl-2 text-[13px] font-semibold whitespace-nowrap text-(--rank-text) tabular-nums",
-                          faded && "text-(--rank-muted)",
-                        )}
-                        style={{ left: `${pct}%` }}
-                      >
-                        {formatBarValue(value, metric)}
+                <li key={row.source} className={cn(SHOW_DIVIDERS && "border-b border-line-soft last:border-b-0")}>
+                  {/* Clicking a row picks that source for the whole page; clicking it again goes back to all. */}
+                  <button
+                    type="button"
+                    onClick={() => onSelect(isSelected ? "all" : row.source)}
+                    aria-pressed={isSelected}
+                    className={cn(
+                      ROW_CLASS,
+                      "-mx-2 w-[calc(100%+1rem)] cursor-pointer rounded-[10px] px-2 text-left transition-colors hover:bg-(--rank-accent-soft)/60 focus-visible:outline-2 focus-visible:outline-primary",
+                      isSelected && "bg-(--rank-accent-soft) hover:bg-(--rank-accent-soft)",
+                    )}
+                  >
+                    {SHOW_RANK && (
+                      <span className="text-right text-[12.5px] text-(--rank-muted) tabular-nums">{index + 1}</span>
+                    )}
+                    {SHOW_CONTEXT ? (
+                      <span className="block min-w-0">
+                        <span className="block truncate text-[13.5px] font-medium text-(--rank-text)">
+                          {WSO2_SOURCE_LABELS[row.source]}
+                        </span>
+                        <span className="block truncate text-[11.5px] text-(--rank-muted) tabular-nums">
+                          {contextLine(row, metric, totals)}
+                        </span>
                       </span>
-                    </div>
-                  </div>
+                    ) : (
+                      // No context line here; it shows on hover instead.
+                      <span
+                        className={cn("block truncate text-[13px] text-(--rank-text)", faded && "text-(--rank-muted)")}
+                        title={contextLine(row, metric, totals)}
+                      >
+                        {WSO2_SOURCE_LABELS[row.source]}
+                      </span>
+                    )}
+                    {/* The bar fills the track minus room for its figure, which sits just past the bar's end. */}
+                    <span className={cn("block min-w-0", BAR_CELL_CLASS)} style={{ paddingRight: LABEL_ROOM_PX }}>
+                      <span className="relative flex h-5 items-center">
+                        <span
+                          className={cn(
+                            "block h-3.5 rounded-[4px] bg-(--rank-accent) transition-[width] duration-[350ms] ease-[ease] motion-reduce:transition-none",
+                            faded && "opacity-30",
+                          )}
+                          style={{ width: `${Math.max(value > 0 ? 0.6 : 0, pct)}%` }}
+                        />
+                        <span
+                          className={cn(
+                            "absolute pl-2 text-[13px] font-semibold whitespace-nowrap text-(--rank-text) tabular-nums",
+                            faded && "text-(--rank-muted)",
+                          )}
+                          style={{ left: `${pct}%` }}
+                        >
+                          {formatBarValue(value, metric)}
+                        </span>
+                      </span>
+                    </span>
+                  </button>
                 </li>
               );
             })}

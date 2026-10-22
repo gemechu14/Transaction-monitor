@@ -112,7 +112,7 @@ function SidePanel({
           <p className={NAME_CLASS}>
             <span className={cn("size-2.5 shrink-0 rounded-full", TONE_DOT_CLASS[tone])} aria-hidden />
             <span className="truncate">{figures.name}</span>
-            {/* Inline so Period over period panels keep the same layout as Channel vs channel. */}
+            {/* Inline so Period comparison panels keep the same layout as Channel comparison. */}
             {figures.caption && (
               <span className="truncate text-xs font-normal text-muted-foreground">· {figures.caption}</span>
             )}
