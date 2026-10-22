@@ -37,7 +37,7 @@ import {
   defaultCustomRanges,
   defaultPeriodIds,
   EARLIEST_DAY,
-  latestCompleteDay,
+  latestSelectableDay,
   liveFigures,
   liveSideName,
   nextOptionId,
@@ -97,7 +97,7 @@ export default function ComparisonPage() {
         : periodOptions.find((o) => o.id === selectedPeriods[side]);
   const optionA = optionFor("a");
   const optionB = optionFor("b");
-  const maxDay = latestCompleteDay();
+  const maxDay = latestSelectableDay();
 
   /** Sets one side's day; if that's the other side's day, moves the other side to the day before (after, on the earliest day). */
   function pickDay(side: SideKey, iso: string) {

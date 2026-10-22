@@ -469,12 +469,18 @@ function allLivePeriodOptions(interval: Interval, today: Date): PeriodOption[] {
 
 /** A single day as a period, e.g. for the Day interval's date pickers. `iso` is "YYYY-MM-DD". */
 export function dayOption(iso: string): PeriodOption {
-  return { id: iso, label: `${weekday(iso)} ${formatShortDate(iso)}`, shortLabel: formatShortDate(iso), range: { from: iso, to: iso } };
+  const tail = soFar(iso);
+  return {
+    id: iso,
+    label: `${weekday(iso)} ${formatShortDate(iso)}${tail}`,
+    shortLabel: `${formatShortDate(iso)}${tail}`,
+    range: { from: iso, to: iso },
+  };
 }
 
 /** Any date range as a period, for the Custom interval, e.g. "1 – 14 Sep 2026". */
 export function rangeOption(range: DateRange): PeriodOption {
-  const label = formatRangeLabel(range);
+  const label = `${formatRangeLabel(range)}${soFar(range.to)}`;
   return { id: `${range.from}_${range.to}`, label, shortLabel: label, range };
 }
 
@@ -484,9 +490,14 @@ export function defaultCustomRanges(today: Date = new Date()): { a: DateRange; b
   return { a: { from: day(-14), to: day(-8) }, b: { from: day(-7), to: day(-1) } };
 }
 
-/** The latest whole day: yesterday (today is still partial). */
-export function latestCompleteDay(today: Date = new Date()): string {
-  return toISODate(addDays(today, -1));
+/** The latest day the date fields allow: today, even though it's still partial (labelled "so far"). */
+export function latestSelectableDay(today: Date = new Date()): string {
+  return toISODate(today);
+}
+
+/** " (so far)" when a period ends today, whose figures are still coming in. */
+function soFar(to: string): string {
+  return to === toISODate(new Date()) ? " (so far)" : "";
 }
 
 /** One source's (or all sources') amount and count from an allAdvanced response; `null` until loaded. */
