@@ -15,7 +15,7 @@ const ICONS: Record<Insight["id"], typeof Coins> = {
 
 export function KeyInsightsCard({ insights, isLoading }: { insights: Insight[]; isLoading?: boolean }) {
   return (
-    <SectionCard title="Key insights" description="What the numbers say, in plain language">
+    <SectionCard title="Key insights" description="What stands out in this comparison">
       {isLoading ? (
         <InsightsLoading />
       ) : (

@@ -1,7 +1,7 @@
 import type { ChannelId } from "@/config/channels";
 import { WSO2_SOURCE_LABELS, type Wso2Source } from "@/config/wso2-sources";
 import { addDays, toISODate, type DateRange } from "@/lib/date";
-import { formatCurrency, formatNumber } from "@/lib/format";
+import { formatCompactAmount, formatCurrency, formatNumber } from "@/lib/format";
 import { channelName, computeOverview, formatRangeLabel, formatShortDate, pickSourceTotals } from "@/lib/overview";
 import type { AllAdvancedTotals, OverviewDataset } from "@/types/api";
 
@@ -172,6 +172,15 @@ export function avgPayment(side: Pick<SideFigures, "amount" | "transactions">): 
   return side.amount !== null && side.transactions ? side.amount / side.transactions : null;
 }
 
+// Insight sentences are read at a glance: big amounts in M/B, payments to the birr.
+function etbShort(value: number): string {
+  return `ETB ${formatCompactAmount(value)}`;
+}
+
+function etbWhole(value: number): string {
+  return `ETB ${formatNumber(value)}`;
+}
+
 function pct(value: number, digits = 1): string {
   return `${Math.abs(value * 100).toFixed(digits)}%`;
 }
@@ -223,14 +232,13 @@ export function channelInsights(
   if (avgA !== null && avgB !== null) {
     const [big, small, bigAvg, smallAvg] = avgA >= avgB ? [a, b, avgA, avgB] : [b, a, avgB, avgA];
     const ratio = smallAvg ? bigAvg / smallAvg : 0;
-    const tail =
-      ratio >= 1.3
-        ? ` ${big.name} carries larger payments (${ratio.toFixed(1)}×), ${small.name} more everyday ones.`
-        : " The two carry similar payment sizes.";
     insights.push({
       id: "avg-payment",
       title: "Average payment size",
-      text: `${a.name} averages ${formatAvgPayment(avgA)} per payment, against ${formatAvgPayment(avgB)} for ${b.name}.${tail}`,
+      text:
+        ratio >= 1.3
+          ? `${big.name} averages ${etbWhole(bigAvg)} per payment, ${ratio.toFixed(1)}× the ${etbWhole(smallAvg)} of ${small.name}.`
+          : `Similar payment sizes: ${etbWhole(avgA)} for ${a.name}, ${etbWhole(avgB)} for ${b.name}.`,
     });
   } else {
     insights.push({
@@ -251,9 +259,8 @@ export function channelInsights(
       id: "share",
       title: "Share of the business",
       text:
-        `${a.name} carries ${pct(shareA)} of the total amount and ${pct(a.transactions / totals.transactions)} of all transactions. ` +
-        `${b.name} carries ${pct(shareB)} and ${pct(b.transactions / totals.transactions)}. ` +
-        `Together they handle ${Math.round((shareA + shareB) * 100)}% of the value.`,
+        `${a.name}: ${pct(shareA)} of all value, ${pct(a.transactions / totals.transactions)} of transactions. ` +
+        `${b.name}: ${pct(shareB)} of value, ${pct(b.transactions / totals.transactions)} of transactions.`,
     });
   }
 
@@ -264,10 +271,10 @@ export function channelInsights(
 
 function gapToCloseChannels(a: SideFigures, b: SideFigures, gap: Gap, periodDays: number): string {
   if (gap.leader === null) return "One side has no data in this period, so there's no gap to measure.";
-  if (gap.leader === "even") return `${a.name} and ${b.name} processed the same amount. There's no gap to close.`;
+  if (gap.leader === "even") return `${a.name} and ${b.name} processed the same amount.`;
   const [leader, trailer] = gap.leader === "a" ? [a, b] : [b, a];
-  const perDay = periodDays ? gap.difference / periodDays : gap.difference;
-  return `${trailer.name} would need about ${formatAmount(perDay)} more per day (${formatAmount(gap.difference)} over ${periodDays} ${periodDays === 1 ? "day" : "days"}) to match ${leader.name}.`;
+  if (periodDays <= 1) return `${trailer.name} is ${etbShort(gap.difference)} behind ${leader.name}.`;
+  return `${trailer.name} is ${etbShort(gap.difference)} behind ${leader.name}, about ${etbShort(gap.difference / periodDays)} a day.`;
 }
 
 export function periodInsights(a: SideFigures, b: SideFigures): Insight[] {
@@ -280,7 +287,7 @@ export function periodInsights(a: SideFigures, b: SideFigures): Insight[] {
     title: "Average payment size",
     text:
       avgA !== null && avgB !== null
-        ? `The average payment was ${formatAvgPayment(avgA)} for ${a.name} and ${formatAvgPayment(avgB)} for ${b.name}.`
+        ? `${etbWhole(avgA)} for ${a.name}, ${etbWhole(avgB)} for ${b.name}.`
         : `${missingName(a, b, "transactions")} transaction counts aren't available, so average payments can't be compared.`,
   });
 
@@ -319,8 +326,8 @@ function gapToClosePeriods(a: SideFigures, b: SideFigures): string {
   }
   const diff = b.amount - a.amount;
   if (diff === 0) return `${b.name} brought in exactly the same amount as ${a.name}.`;
-  if (diff < 0) return `${b.name} brought in ${formatAmount(-diff)} less than ${a.name}.`;
-  return `${b.name} brought in ${formatAmount(diff)} more than ${a.name}.`;
+  if (diff < 0) return `${b.name} brought in ${etbShort(-diff)} less than ${a.name}.`;
+  return `${b.name} brought in ${etbShort(diff)} more than ${a.name}.`;
 }
 
 /* ---------- share + bottom line ---------- */

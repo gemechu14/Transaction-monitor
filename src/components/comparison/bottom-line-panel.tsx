@@ -17,26 +17,26 @@ const TONE_NAME_CLASS: Record<SideTone, string> = { lead: "text-primary-strong",
 export function BottomLinePanel({ line, isLoading }: { line: BottomLine | null; isLoading?: boolean }) {
   return (
     <section className="rounded-2xl bg-primary-soft px-7 py-6 max-[620px]:px-5 max-[620px]:py-5" aria-live="polite">
-      <p className="text-[13px] font-semibold text-primary-strong">Bottom line</p>
+      <p className="text-xs font-semibold text-primary-strong">Bottom line</p>
       {isLoading ? (
         <div aria-busy="true">
-          <ShimmerLine className="mt-1 text-xl leading-snug font-bold max-[620px]:text-lg" barClassName="w-2/3 rounded-lg" />
-          <ShimmerLine className="mt-2 text-sm" barClassName="w-1/2" delay={100} />
+          <ShimmerLine className="mt-1 text-base leading-snug font-bold max-[620px]:text-[15px]" barClassName="w-2/3 rounded-lg" />
+          <ShimmerLine className="mt-1.5 text-[13px]" barClassName="w-1/2" delay={100} />
         </div>
       ) : !line ? (
-        <p className="mt-1 text-xl leading-snug font-bold text-foreground max-[620px]:text-lg">
+        <p className="mt-1 text-base leading-snug font-bold text-foreground max-[620px]:text-[15px]">
           Not enough data to compare amounts
         </p>
       ) : (
         <>
-          <p className="mt-1 text-xl leading-snug font-bold text-foreground max-[620px]:text-lg">
+          <p className="mt-1 text-base leading-snug font-bold text-foreground max-[620px]:text-[15px]">
             {line.parts.map((part, index) => (
               <span key={index} className={cn(part.side && TONE_NAME_CLASS[sideTone(part.side, leaderOf(line))])}>
                 {part.text}
               </span>
             ))}
           </p>
-          <p className="mt-2 text-sm text-foreground-2 tabular-nums">{line.detail}</p>
+          <p className="mt-1.5 text-[13px] text-foreground-2 tabular-nums">{line.detail}</p>
         </>
       )}
     </section>

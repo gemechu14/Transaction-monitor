@@ -2,8 +2,9 @@ import type { Kpi } from "@/types/api";
 
 // Figures are always written in full ("2,232,593,350.43", "39,188"), never
 // abbreviated to K, M or B, on screen and in every export. The exceptions are
-// chart axis ticks (`formatAxisTick`) and the Comparison share-of-amount ring
-// (`formatCompactAmount`), where full numbers don't fit.
+// chart axis ticks (`formatAxisTick`), and the Comparison share-of-amount ring
+// and key-insight sentences (`formatCompactAmount`), where full numbers get in
+// the way.
 
 const wholeNumberFormatter = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 });
 
