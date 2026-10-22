@@ -96,13 +96,17 @@ export default function OverviewPage() {
           </span>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        {/* On phones: source across the full width, then period and export on one row. */}
+        <div className="flex flex-wrap items-center gap-2 max-[620px]:grid max-[620px]:w-full max-[620px]:grid-cols-[minmax(0,1fr)_auto]">
           <Select
             items={WSO2_SOURCE_LABELS}
             value={source}
             onValueChange={(value) => setSource(value as Wso2Source)}
           >
-            <SelectTrigger aria-label="Source" className="w-48 rounded-[10px] bg-card px-3.5 data-[size=default]:h-10">
+            <SelectTrigger
+              aria-label="Source"
+              className="w-48 rounded-[10px] bg-card px-3.5 data-[size=default]:h-10 max-[620px]:col-span-2 max-[620px]:w-full"
+            >
               <Layers className="size-4 text-primary-strong" />
               <SelectValue />
             </SelectTrigger>
@@ -114,7 +118,9 @@ export default function OverviewPage() {
               ))}
             </SelectContent>
           </Select>
-          <PeriodPicker value={period} onChange={setPeriod} dataFrom={dataset?.from} size="sm" />
+          <div className="min-w-0 max-[620px]:[&>button]:w-full">
+            <PeriodPicker value={period} onChange={setPeriod} dataFrom={dataset?.from} size="sm" />
+          </div>
           <ExportMenu
             // The export holds only live API figures, so it waits for (and needs) the totals.
             disabled={!totalsQuery.data}

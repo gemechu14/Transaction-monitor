@@ -26,7 +26,8 @@ export function SectionCard({
           <h2 className="text-base font-semibold text-foreground">{title}</h2>
           {description && <p className="mt-0.5 text-[13px] text-muted-foreground">{description}</p>}
         </div>
-        {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+        {/* On phones the controls take the full width under the title. */}
+        {actions && <div className="flex flex-wrap items-center gap-2 max-[620px]:w-full">{actions}</div>}
       </header>
       {children}
     </section>

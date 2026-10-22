@@ -75,7 +75,7 @@ function LoadingState() {
     <div aria-busy="true">
       <ShimmerLine className={HEADLINE_CLASS} barClassName="h-[0.8em] w-56 rounded-lg" />
       <div className="skeleton-shimmer mt-5 h-3.5 rounded-full" />
-      <ul className="mt-5 grid grid-cols-2 gap-3">
+      <ul className="mt-5 grid grid-cols-2 gap-3 max-[480px]:grid-cols-1">
         {Array.from({ length: TOP_COUNT + 1 }, (_, index) => (
           <li key={index} className="rounded-xl bg-muted px-4 py-3">
             <ShimmerLine className={TILE_LABEL_CLASS} barClassName="h-[0.8em] w-24 rounded-full" delay={index * 100} />
@@ -136,9 +136,9 @@ export function ValueMixCard({
             ))}
           </div>
 
-          <ul className="mt-5 grid grid-cols-2 gap-3">
+          <ul className="mt-5 grid grid-cols-2 gap-3 max-[480px]:grid-cols-1">
             {segments.map((segment) => (
-              <li key={segment.key} className="rounded-xl bg-muted px-4 py-3">
+              <li key={segment.key} className="min-w-0 rounded-xl bg-muted px-4 py-3">
                 <p className={TILE_LABEL_CLASS}>
                   <span className="size-2 shrink-0 rounded-full" style={{ backgroundColor: segment.color }} />
                   <span className="truncate">{segment.label}</span>

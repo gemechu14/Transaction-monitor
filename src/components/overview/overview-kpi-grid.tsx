@@ -67,7 +67,8 @@ function KpiSkeleton({ kpi, index }: { kpi?: OverviewKpi; index: number }) {
 }
 
 /**
- * Six equal KPI cards in a 3×2 grid (2 per row at ≤620px). Each card spans
+ * Six equal KPI cards in a 3×2 grid (2 per row at ≤620px, 1 at ≤480px so the
+ * full amounts stay readable). Each card spans
  * three subgrid rows so titles, numbers and detail lines line up across a row.
  * `loadingIds` swaps just those cards for skeletons, e.g. while live totals load.
  */
@@ -83,7 +84,7 @@ export function OverviewKpiGrid({
   skeletonCount?: number;
 }) {
   return (
-    <div className="grid grid-cols-2 gap-3 min-[621px]:grid-cols-3">
+    <div className="grid grid-cols-1 gap-3 min-[481px]:grid-cols-2 min-[621px]:grid-cols-3">
       {isLoading
         ? Array.from({ length: skeletonCount }).map((_, index) => (
             <KpiSkeleton key={index} index={index} />

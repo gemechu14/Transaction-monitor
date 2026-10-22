@@ -117,7 +117,7 @@ export default function SettingsPage() {
       {isAdmin ? (
         <UserManagementCard />
       ) : (
-        <section className="space-y-4 rounded-2xl border border-border bg-card px-6 py-[22px]">
+        <section className="space-y-4 rounded-2xl border border-border bg-card px-6 py-[22px] max-[620px]:p-[18px]">
           <Skeleton className="h-5 w-48" />
           <Skeleton className="h-10 w-full rounded-[10px]" />
           <Skeleton className="h-48 w-full" />

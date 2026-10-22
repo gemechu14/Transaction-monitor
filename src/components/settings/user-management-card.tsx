@@ -40,10 +40,8 @@ const STATUS_FILTER_ITEMS: Record<string, string> = {
   DISABLED: "Disabled",
 };
 
-const ROLE_CARDS: { value: UserRole; label: string; description: string }[] = [
-  { value: "USER", label: "User", description: "Can view all dashboards" },
-  { value: "ADMIN", label: "Admin", description: "Can also manage users" },
-];
+const ROLE_OPTIONS: UserRole[] = ["USER", "ADMIN"];
+const ROLE_ITEMS: Record<UserRole, string> = { USER: "User", ADMIN: "Admin" };
 
 /* Shared control styles: 40px controls, 10px radius. */
 const CONTROL =
@@ -53,7 +51,6 @@ const BUTTON_BASE =
 const PRIMARY_BUTTON = cn(BUTTON_BASE, "bg-primary font-bold text-white hover:bg-primary/90");
 const OUTLINE_BUTTON = cn(BUTTON_BASE, "border border-border bg-card text-foreground hover:bg-muted");
 const DANGER_BUTTON = cn(BUTTON_BASE, "bg-bad text-white hover:bg-bad/90");
-
 function initialsFor(user: AdminUser): string {
   const source = (user.displayName || user.email).trim();
   const parts = source.split(/\s+/).filter(Boolean);
@@ -86,49 +83,29 @@ function DialogIcon({ tone = "primary", children }: { tone?: "primary" | "bad"; 
   );
 }
 
-function RoleCards({
-  name,
+function RoleSelect({
+  id,
   value,
   onChange,
 }: {
-  name: string;
+  /** Matches the field label's `htmlFor`. */
+  id: string;
   value: UserRole;
   onChange: (role: UserRole) => void;
 }) {
   return (
-    <div role="radiogroup" aria-label="Role" className="grid grid-cols-2 gap-2">
-      {ROLE_CARDS.map((card) => {
-        const selected = value === card.value;
-        return (
-          <label
-            key={card.value}
-            className={cn(
-              "flex cursor-pointer flex-col gap-0.5 rounded-[10px] border p-3 transition-colors has-focus-visible:ring-3 has-focus-visible:ring-primary/20",
-              selected ? "border-primary bg-primary-soft" : "border-border hover:bg-muted",
-            )}
-          >
-            <input
-              type="radio"
-              name={name}
-              value={card.value}
-              checked={selected}
-              onChange={() => onChange(card.value)}
-              className="sr-only"
-            />
-            <span
-              className={cn(
-                "flex items-center gap-1.5 text-sm font-semibold",
-                selected ? "text-primary-strong" : "text-foreground",
-              )}
-            >
-              {card.value === "ADMIN" && <ShieldCheck className="size-3.5" />}
-              {card.label}
-            </span>
-            <span className="text-xs text-muted-foreground">{card.description}</span>
-          </label>
-        );
-      })}
-    </div>
+    <Select items={ROLE_ITEMS} value={value} onValueChange={(next) => onChange(next as UserRole)}>
+      <SelectTrigger id={id} className={cn(CONTROL, "w-full px-3 data-[size=default]:h-10")}>
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent className="p-1.5">
+        {ROLE_OPTIONS.map((role) => (
+          <SelectItem key={role} value={role} className="rounded-lg px-3 py-2.5 not-first:mt-1">
+            {ROLE_ITEMS[role]}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }
 
@@ -217,11 +194,13 @@ function AddUserDialog({ onCreated }: { onCreated: () => void }) {
           </div>
 
           <div className="space-y-1.5">
-            <p className="text-[13px] font-medium text-foreground-2">Role</p>
-            <RoleCards name="new-user-role" value={role} onChange={setRole} />
+            <label htmlFor="new-user-role" className="text-[13px] font-medium text-foreground-2">
+              Role
+            </label>
+            <RoleSelect id="new-user-role" value={role} onChange={setRole} />
           </div>
 
-          <DialogFooter className="-mx-6 mt-1 border-t border-line-soft px-6 pt-4 pb-5">
+          <DialogFooter className="-mx-6 mt-1 border-t border-line-soft px-6 pt-4 pb-5 flex-row justify-end max-[620px]:[&>*]:flex-1">
             <DialogClose render={<button type="button" className={OUTLINE_BUTTON} />}>Cancel</DialogClose>
             <button type="submit" className={PRIMARY_BUTTON} disabled={createUserMutation.isPending}>
               {createUserMutation.isPending && <Loader2 className="size-4 animate-spin" />}
@@ -333,8 +312,10 @@ function EditUserDialog({
           </div>
 
           <div className="space-y-1.5">
-            <p className="text-[13px] font-medium text-foreground-2">Role</p>
-            <RoleCards name={`edit-role-${user.id}`} value={role} onChange={setRole} />
+            <label htmlFor={`edit-role-${user.id}`} className="text-[13px] font-medium text-foreground-2">
+              Role
+            </label>
+            <RoleSelect id={`edit-role-${user.id}`} value={role} onChange={setRole} />
           </div>
 
           {/*
@@ -363,7 +344,7 @@ function EditUserDialog({
           </div>
           */}
 
-          <DialogFooter className="-mx-6 mt-1 border-t border-line-soft px-6 pt-4 pb-5">
+          <DialogFooter className="-mx-6 mt-1 border-t border-line-soft px-6 pt-4 pb-5 flex-row justify-end max-[620px]:[&>*]:flex-1">
             <DialogClose render={<button type="button" className={OUTLINE_BUTTON} />}>Cancel</DialogClose>
             <button type="submit" className={PRIMARY_BUTTON} disabled={updateUserMutation.isPending}>
               {updateUserMutation.isPending && <Loader2 className="size-4 animate-spin" />}
@@ -409,7 +390,7 @@ function ToggleStatusDialog({
           </div>
         </DialogHeader>
 
-        <DialogFooter className="mt-1 border-t border-line-soft px-6 pt-4 pb-5">
+        <DialogFooter className="mt-1 border-t border-line-soft px-6 pt-4 pb-5 flex-row justify-end max-[620px]:[&>*]:flex-1">
           <DialogClose render={<button type="button" className={OUTLINE_BUTTON} />}>Cancel</DialogClose>
           <button
             type="button"
@@ -476,7 +457,7 @@ function DeleteUserDialog({
           </div>
         </DialogHeader>
 
-        <DialogFooter className="mt-1 border-t border-line-soft px-6 pt-4 pb-5">
+        <DialogFooter className="mt-1 border-t border-line-soft px-6 pt-4 pb-5 flex-row justify-end max-[620px]:[&>*]:flex-1">
           <DialogClose render={<button type="button" className={OUTLINE_BUTTON} />}>Cancel</DialogClose>
           <button
             type="button"
@@ -653,8 +634,9 @@ export function UserManagementCard() {
         <AddUserDialog onCreated={() => usersQuery.refetch()} />
       </header>
 
-      <div className="flex flex-wrap items-center gap-2 px-6 pt-5 pb-4 max-[620px]:px-[18px] max-[620px]:[&>*]:w-full">
-        <div className="relative min-w-[220px] flex-1">
+      {/* On phones: search across the full width, then the two filters side by side. */}
+      <div className="flex flex-wrap items-center gap-2 px-6 pt-5 pb-4 max-[620px]:grid max-[620px]:grid-cols-2 max-[620px]:px-[18px]">
+        <div className="relative min-w-[220px] flex-1 max-[620px]:col-span-2 max-[620px]:min-w-0">
           <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
           <input
             type="search"
@@ -671,7 +653,7 @@ export function UserManagementCard() {
           value={roleFilter}
           onValueChange={(value) => setRoleFilter(value as "all" | UserRole)}
         >
-          <SelectTrigger aria-label="Filter by role" className={cn(CONTROL, "w-36 px-3 data-[size=default]:h-10")}>
+          <SelectTrigger aria-label="Filter by role" className={cn(CONTROL, "w-36 px-3 data-[size=default]:h-10 max-[620px]:w-full")}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -688,7 +670,7 @@ export function UserManagementCard() {
           value={statusFilter}
           onValueChange={(value) => setStatusFilter(value as "all" | UserStatus)}
         >
-          <SelectTrigger aria-label="Filter by status" className={cn(CONTROL, "w-40 px-3 data-[size=default]:h-10")}>
+          <SelectTrigger aria-label="Filter by status" className={cn(CONTROL, "w-40 px-3 data-[size=default]:h-10 max-[620px]:w-full")}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -701,15 +683,15 @@ export function UserManagementCard() {
         </Select>
       </div>
 
-      {/* Scrolls sideways under 640px rather than squashing the columns. */}
+      {/* Under 640px the Role and Status columns fold into the user cell, so nothing scrolls sideways. */}
       <div className="relative overflow-x-auto">
-        <table className="w-full border-collapse text-sm max-[640px]:min-w-[600px]">
+        <table className="w-full border-collapse text-sm max-[640px]:table-fixed">
           <thead>
             <tr className="border-y border-line-soft text-left text-xs font-semibold text-muted-foreground">
-              <th scope="col" className="py-2.5 pr-4 pl-6 font-semibold">User</th>
-              <th scope="col" className="px-4 py-2.5 font-semibold">Role</th>
-              <th scope="col" className="px-4 py-2.5 font-semibold">Status</th>
-              <th scope="col" className="py-2.5 pr-6 pl-4 text-right font-semibold">
+              <th scope="col" className="py-2.5 pr-4 pl-6 font-semibold max-[640px]:pl-[18px]">User</th>
+              <th scope="col" className="px-4 py-2.5 font-semibold max-[640px]:hidden">Role</th>
+              <th scope="col" className="px-4 py-2.5 font-semibold max-[640px]:hidden">Status</th>
+              <th scope="col" className="py-2.5 pr-6 pl-4 text-right font-semibold max-[640px]:w-14 max-[640px]:pr-3 max-[640px]:pl-0">
                 <span className="sr-only">Actions</span>
               </th>
             </tr>
@@ -718,22 +700,22 @@ export function UserManagementCard() {
             {usersQuery.isLoading ? (
               Array.from({ length: 4 }).map((_, index) => (
                 <tr key={index} className="h-16">
-                  <td className="pr-4 pl-6">
+                  <td className="pr-4 pl-6 max-[640px]:pl-[18px]">
                     <div className="flex items-center gap-3">
-                      <Skeleton className="size-[38px] rounded-full" />
-                      <div className="space-y-1.5">
-                        <Skeleton className="h-3.5 w-32" />
-                        <Skeleton className="h-3 w-44" />
+                      <Skeleton className="size-[38px] shrink-0 rounded-full" />
+                      <div className="min-w-0 space-y-1.5">
+                        <Skeleton className="h-3.5 w-32 max-w-full" />
+                        <Skeleton className="h-3 w-44 max-w-full" />
                       </div>
                     </div>
                   </td>
-                  <td className="px-4">
+                  <td className="px-4 max-[640px]:hidden">
                     <Skeleton className="h-6 w-16 rounded-full" />
                   </td>
-                  <td className="px-4">
+                  <td className="px-4 max-[640px]:hidden">
                     <Skeleton className="h-4 w-20" />
                   </td>
-                  <td className="pr-6 pl-4" />
+                  <td className="pr-6 pl-4 max-[640px]:pr-3 max-[640px]:pl-0" />
                 </tr>
               ))
             ) : users.length === 0 ? (
@@ -747,8 +729,8 @@ export function UserManagementCard() {
                 const isSelf = user.id === currentUserId;
                 return (
                   <tr key={user.id} className="h-16 transition-colors hover:bg-muted">
-                    <td className="py-2.5 pr-4 pl-6">
-                      <div className="flex items-center gap-3">
+                    <td className="py-2.5 pr-4 pl-6 max-[640px]:pl-[18px]">
+                      <div className="flex items-center gap-3 max-[640px]:items-start">
                         <span
                           className={cn(
                             "flex size-[38px] shrink-0 items-center justify-center rounded-full text-[13px] font-bold",
@@ -768,16 +750,21 @@ export function UserManagementCard() {
                             )}
                           </p>
                           <p className="truncate text-[13px] text-muted-foreground">{user.email}</p>
+                          {/* Role and status, shown here when their columns are hidden. */}
+                          <div className="mt-2 hidden flex-wrap items-start gap-x-3 gap-y-1 max-[640px]:flex">
+                            <RolePill role={user.role} />
+                            <StatusLabel user={user} />
+                          </div>
                         </div>
                       </div>
                     </td>
-                    <td className="px-4">
+                    <td className="px-4 max-[640px]:hidden">
                       <RolePill role={user.role} />
                     </td>
-                    <td className="px-4">
+                    <td className="px-4 max-[640px]:hidden">
                       <StatusLabel user={user} />
                     </td>
-                    <td className="pr-6 pl-4 text-right">
+                    <td className="pr-6 pl-4 text-right max-[640px]:pr-3 max-[640px]:pl-0">
                       <UserRowActions
                         user={user}
                         isPending={isPendingFor(user.id)}

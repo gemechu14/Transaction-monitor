@@ -51,21 +51,21 @@ export function buildPeriodPresets(today: Date = new Date()): PeriodPreset[] {
   const to = toISODate(today);
   const daysBack = (n: number) => toISODate(addDays(today, -(n - 1)));
   const monthsBack = (n: number) => toISODate(new Date(today.getFullYear(), today.getMonth() - (n - 1), 1));
-  // Calendar quarter: Jan, Apr, Jul or Oct 1.
-  const quarterStart = toISODate(new Date(today.getFullYear(), today.getMonth() - (today.getMonth() % 3), 1));
+  // "3 months" rather than the calendar quarter, which in its first month
+  // (Jan, Apr, Jul, Oct) is the same range as "This month".
   return [
     { id: "today", label: "Today", range: { from: to, to } },
     { id: "last-7", label: "Last 7 days", range: { from: daysBack(7), to } },
     // Hidden for now.
     // { id: "last-4w", label: "Last 4 weeks", range: { from: daysBack(28), to } },
     { id: "this-month", label: "This month", range: { from: monthsBack(1), to } },
-    { id: "quarter", label: "This quarter", range: { from: quarterStart, to } },
+    { id: "quarter", label: "3 months", range: { from: monthsBack(3), to } },
     { id: "six-months", label: "6 months", range: { from: monthsBack(6), to } },
     { id: "year", label: "Yearly", range: { from: monthsBack(12), to } },
   ];
 }
 
-/** Until the user picks another period, the dashboard shows this quarter. */
+/** Until the user picks another period, the dashboard shows the last 3 months. */
 export function defaultPeriod(): OverviewPeriod {
   const quarter = buildPeriodPresets().find((p) => p.id === "quarter")!;
   return { preset: quarter.id, range: quarter.range };

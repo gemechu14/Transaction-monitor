@@ -33,6 +33,7 @@ import {
   type LiveRankMetric,
 } from "@/lib/channels";
 import { countDays, dailySeries, sourceRows } from "@/lib/overview";
+import { cn } from "@/lib/utils";
 
 export default function ChannelsPage() {
   // Shared across pages; kept until the user picks another period.
@@ -85,13 +86,20 @@ export default function ChannelsPage() {
           </span>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        {/* On phones: source and ranking side by side, then the period across the full width. */}
+        <div className="flex flex-wrap items-center gap-2 max-[620px]:grid max-[620px]:w-full max-[620px]:grid-cols-2">
           <Select
             items={WSO2_SOURCE_LABELS}
             value={source}
             onValueChange={(value) => setSource(value as Wso2Source)}
           >
-            <SelectTrigger aria-label="Source" className="w-48 rounded-[10px] bg-card px-3.5 data-[size=default]:h-10">
+            <SelectTrigger
+              aria-label="Source"
+              className={cn(
+                "w-48 rounded-[10px] bg-card px-3.5 data-[size=default]:h-10 max-[620px]:w-full",
+                source !== "all" && "max-[620px]:col-span-2",
+              )}
+            >
               <Layers className="size-4 text-primary-strong" />
               <SelectValue />
             </SelectTrigger>
@@ -105,7 +113,10 @@ export default function ChannelsPage() {
           </Select>
           {source === "all" && (
             <Select items={LIVE_RANK_ITEMS} value={rankBy} onValueChange={(value) => setRankBy(value as LiveRankMetric)}>
-              <SelectTrigger aria-label="Rank channels by" className="w-[204px] gap-1.5 rounded-[10px] bg-card px-3 data-[size=default]:h-10">
+              <SelectTrigger
+                aria-label="Rank channels by"
+                className="w-[204px] gap-1.5 rounded-[10px] bg-card px-3 data-[size=default]:h-10 max-[620px]:w-full"
+              >
                 <ArrowDownWideNarrow className="size-4 text-primary-strong" />
                 <SelectValue />
               </SelectTrigger>
@@ -118,7 +129,9 @@ export default function ChannelsPage() {
               </SelectContent>
             </Select>
           )}
-          <PeriodPicker value={period} onChange={setPeriod} dataFrom={dataset?.from} size="sm" />
+          <div className="min-w-0 max-[620px]:col-span-2 max-[620px]:[&>button]:w-full">
+            <PeriodPicker value={period} onChange={setPeriod} dataFrom={dataset?.from} size="sm" />
+          </div>
           {/* <ExportMenu
             disabled={isLoading || !view}
             getReport={(author) =>

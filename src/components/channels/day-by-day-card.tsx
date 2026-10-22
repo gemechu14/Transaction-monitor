@@ -111,7 +111,7 @@ export function DayByDayCard({
             value={active}
             onValueChange={(value) => setGranularity(value as Granularity)}
           >
-            <SelectTrigger aria-label="Group rows by" className={cn(TRIGGER_CLASS, "w-32")}>
+            <SelectTrigger aria-label="Group rows by" className={cn(TRIGGER_CLASS, "w-32 max-[620px]:w-auto max-[620px]:min-w-0 max-[620px]:flex-1")}>
               <CalendarDays className="size-4 text-primary-strong" />
               <SelectValue />
             </SelectTrigger>
@@ -124,7 +124,7 @@ export function DayByDayCard({
             </SelectContent>
           </Select>
           <Select items={VIEW_ITEMS} value={view} onValueChange={(value) => setView(value as View)}>
-            <SelectTrigger aria-label="Table or chart" className={cn(TRIGGER_CLASS, "w-28")}>
+            <SelectTrigger aria-label="Table or chart" className={cn(TRIGGER_CLASS, "w-28 max-[620px]:w-auto max-[620px]:min-w-0 max-[620px]:flex-1")}>
               {view === "table" ? (
                 <Table className="size-4 text-primary-strong" />
               ) : (
@@ -191,7 +191,7 @@ function DayTable({
   });
   return (
     <div className="relative max-h-[560px] overflow-auto rounded-xl border border-line-soft">
-      <table className="w-full border-collapse font-sans text-sm tabular-nums max-[640px]:min-w-[560px]">
+      <table className="w-full border-collapse font-sans text-sm tabular-nums max-[640px]:min-w-[520px]">
         <colgroup>
           <col className="w-[31%]" />
           <col className="w-[23%]" />
@@ -208,7 +208,7 @@ function DayTable({
                   key={col.key}
                   scope="col"
                   aria-sort={active ? (sort.dir === "asc" ? "ascending" : "descending") : "none"}
-                  className={cn("h-10 px-5 font-normal", col.align === "right" ? "text-right" : "text-left")}
+                  className={cn("h-10 px-5 font-normal max-[640px]:px-3", col.align === "right" ? "text-right" : "text-left")}
                 >
                   <button
                     type="button"
@@ -233,37 +233,37 @@ function DayTable({
               key={row.start}
               className="h-[52px] border-b border-line-soft transition-colors last:border-b-0 even:bg-muted/40 hover:bg-primary-soft/50"
             >
-              <td className="px-5 whitespace-nowrap">
+              <td className="px-5 max-[640px]:px-3 whitespace-nowrap">
                 <p className="font-medium text-foreground">{row.label}</p>
                 <p className={cn("text-xs", row.weekend ? "font-medium text-orange-strong" : "text-muted-foreground")}>
                   {row.sublabel}
                 </p>
               </td>
-              <td className="px-5 font-semibold whitespace-nowrap text-foreground">
+              <td className="px-5 max-[640px]:px-3 font-semibold whitespace-nowrap text-foreground">
                 {formatAmountValue(row.value)}
               </td>
-              <td className="px-5 font-medium text-foreground">
+              <td className="px-5 max-[640px]:px-3 font-medium text-foreground">
                 {Math.round(row.count).toLocaleString("en-US")}
               </td>
-              <td className="px-5 whitespace-nowrap text-muted-foreground">{formatAmountValue(row.avgTicket)}</td>
+              <td className="px-5 max-[640px]:px-3 whitespace-nowrap text-muted-foreground">{formatAmountValue(row.avgTicket)}</td>
               {/* Failed / reversed and Success are hidden for now.
-              <td className="px-5 text-foreground">{Math.round(row.failed).toLocaleString("en-US")}</td>
-              <td className="px-5">{(row.successRate * 100).toFixed(1)}%</td> */}
+              <td className="px-5 max-[640px]:px-3 text-foreground">{Math.round(row.failed).toLocaleString("en-US")}</td>
+              <td className="px-5 max-[640px]:px-3">{(row.successRate * 100).toFixed(1)}%</td> */}
             </tr>
           ))}
         </tbody>
         <tfoot className="sticky bottom-0 z-10 bg-card shadow-[inset_0_1px_0_var(--border)]">
           <tr className="h-12 font-semibold text-foreground">
-            <td className="px-5">
+            <td className="px-5 max-[640px]:px-3">
               Total{" "}
               <span className="text-xs font-normal text-muted-foreground">
                 · {rows.length} {heading.toLowerCase()}
                 {rows.length === 1 ? "" : "s"}
               </span>
             </td>
-            <td className="px-5 whitespace-nowrap">{formatAmountValue(totals.value)}</td>
-            <td className="px-5">{Math.round(totals.count).toLocaleString("en-US")}</td>
-            <td className="px-5 whitespace-nowrap text-muted-foreground">
+            <td className="px-5 max-[640px]:px-3 whitespace-nowrap">{formatAmountValue(totals.value)}</td>
+            <td className="px-5 max-[640px]:px-3">{Math.round(totals.count).toLocaleString("en-US")}</td>
+            <td className="px-5 max-[640px]:px-3 whitespace-nowrap text-muted-foreground">
               {formatAmountValue(totals.count ? totals.value / totals.count : 0)}
             </td>
           </tr>

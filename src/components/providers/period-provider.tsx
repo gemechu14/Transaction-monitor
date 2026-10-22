@@ -20,7 +20,7 @@ interface PeriodContextValue {
 
 const PeriodContext = createContext<PeriodContextValue | null>(null);
 
-/** The saved period, with presets recomputed so "This quarter" still ends today. */
+/** The saved period, with presets recomputed so "3 months" still ends today. */
 function readSaved(): OverviewPeriod | null {
   try {
     const raw = window.sessionStorage.getItem(STORAGE_KEY);
