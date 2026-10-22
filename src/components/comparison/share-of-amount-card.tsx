@@ -4,7 +4,7 @@ import { sideDotClass, sideTone } from "@/components/comparison/comparison-filte
 import { SectionCard } from "@/components/overview/section-card";
 import { ShimmerLine, ShimmerRing } from "@/components/ui/shimmer-line";
 import { gapBetween, shareOfAmount, type SideFigures, type SideKey } from "@/lib/comparison";
-import { formatAmountValue } from "@/lib/format";
+import { formatAmountValue, formatCompactAmount } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 const SIZE = 220;
@@ -94,7 +94,9 @@ function ShareBody({
           </svg>
           <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
             <span className="text-xs text-muted-foreground">Combined (ETB)</span>
-            <span className="text-lg font-bold text-foreground tabular-nums">{formatAmountValue(share.combined)}</span>
+            <span className="text-2xl font-bold text-foreground tabular-nums" title={formatAmountValue(share.combined)}>
+              {formatCompactAmount(share.combined)}
+            </span>
           </div>
         </div>
 
@@ -108,8 +110,11 @@ function ShareBody({
                   {figures.name}
                 </p>
                 <p className="text-2xl font-bold text-foreground tabular-nums">{share[side].toFixed(1)}%</p>
-                <p className="text-[13px] text-muted-foreground tabular-nums">
-                  {figures.amount === null ? "—" : formatAmountValue(figures.amount)}
+                <p
+                  className="text-[13px] text-muted-foreground tabular-nums"
+                  title={figures.amount === null ? undefined : formatAmountValue(figures.amount)}
+                >
+                  {figures.amount === null ? "—" : formatCompactAmount(figures.amount)}
                 </p>
               </li>
             );

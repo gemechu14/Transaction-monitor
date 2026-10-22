@@ -1,8 +1,9 @@
 import type { Kpi } from "@/types/api";
 
 // Figures are always written in full ("2,232,593,350.43", "39,188"), never
-// abbreviated to K, M or B, on screen and in every export. The one exception
-// is chart axis ticks (`formatAxisTick`), where full numbers don't fit.
+// abbreviated to K, M or B, on screen and in every export. The exceptions are
+// chart axis ticks (`formatAxisTick`) and the Comparison share-of-amount ring
+// (`formatCompactAmount`), where full numbers don't fit.
 
 const wholeNumberFormatter = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 });
 
@@ -21,6 +22,17 @@ const axisTickFormatter = new Intl.NumberFormat("en-US", { notation: "compact", 
 /** Chart axis ticks only: "0", "950", "40K", "200M", "1.5B". */
 export function formatAxisTick(value: number): string {
   return axisTickFormatter.format(value);
+}
+
+const compactAmountFormatter = new Intl.NumberFormat("en-US", {
+  notation: "compact",
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
+/** Large amounts shortened to M or B: "1.61B", "548.32M"; below a million in full. */
+export function formatCompactAmount(value: number): string {
+  return Math.abs(value) >= 1_000_000 ? compactAmountFormatter.format(value) : amountFormatter.format(value);
 }
 
 /** Bare amount with two decimals: "2,232,593,350.43". */
