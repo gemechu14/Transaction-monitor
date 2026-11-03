@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/select";
 import { usePeriod } from "@/components/providers/period-provider";
 import type { ChannelId } from "@/config/channels";
+import { SourceOption } from "@/components/sources/source-option";
 import { WSO2_SOURCE_LABELS, WSO2_SOURCES, type Wso2Source } from "@/config/wso2-sources";
 import { useAllAdvanced, useDailyTransaction, useMe, useOverviewDataset } from "@/hooks";
 import {
@@ -113,7 +114,7 @@ export default function OverviewPage() {
             <SelectContent>
               {WSO2_SOURCES.map((id) => (
                 <SelectItem key={id} value={id}>
-                  {WSO2_SOURCE_LABELS[id]}
+                  <SourceOption source={id} />
                 </SelectItem>
               ))}
             </SelectContent>

@@ -11,7 +11,7 @@ import type { AllAdvancedParams, AllAdvancedTotals } from "@/types/api";
  * same figures and longer ranges add up from the same days.
  */
 
-const DAILY_PROFILE: Record<Wso2ChannelSource, { amount: number; transactions: number }> = {
+const DAILY_PROFILE: Partial<Record<Wso2ChannelSource, { amount: number; transactions: number }>> = {
   ips_incoming: { amount: 88_000_000, transactions: 8_900 },
   telebirrToBank: { amount: 68_000_000, transactions: 5_600 },
   bankToTelebirr: { amount: 43_000_000, transactions: 730 },
@@ -41,6 +41,7 @@ function daysUpToToday(params: AllAdvancedParams): string[] {
 /** One source's figures for one day. */
 function sourceDay(source: Wso2ChannelSource, iso: string): { totalTransactions: number; totalAmount: number } {
   const profile = DAILY_PROFILE[source];
+  if (!profile) return { totalTransactions: 0, totalAmount: 0 };
   const random = seededRandom("all-advanced", source, iso);
   const factor = weekdayFactor(iso) * (0.85 + random() * 0.3);
   return {

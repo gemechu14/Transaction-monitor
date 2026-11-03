@@ -1,3 +1,4 @@
+import { isPlaceholderSource } from "@/config/wso2-sources";
 import { AUTH_API_BASE_URL } from "@/lib/api/auth-client";
 import { ApiError } from "@/lib/api/client";
 // Dummy data, for working without the backend: uncomment this import and the two
@@ -53,6 +54,9 @@ export const DAILY_TRANSACTION_PATH = "/api/dashboard/daily-transaction";
 
 /** Per-day live totals for one source (or all). Needs the session cookie like `getAllAdvanced`. */
 export async function getDailyTransaction(params: DailyTransactionParams): Promise<DailyTransactionTotals> {
+  // Frontend-only channels: no days means every day counts as 0.
+  if (params.source && isPlaceholderSource(params.source)) return {};
+
   const search = new URLSearchParams({
     startDate: params.startDate,
     endDate: params.endDate,

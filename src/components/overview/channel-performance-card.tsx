@@ -12,8 +12,10 @@ import { ArrowLeftRight, Banknote, Receipt, type LucideIcon } from "lucide-react
 //   SelectTrigger,
 //   SelectValue,
 // } from "@/components/ui/select";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   WSO2_CHANNEL_SOURCES,
+  WSO2_SOURCE_DESCRIPTIONS,
   WSO2_SOURCE_LABELS,
   type Wso2Source,
 } from "@/config/wso2-sources";
@@ -314,13 +316,26 @@ export function ChannelPerformanceCard({
                         </span>
                       </span>
                     ) : (
-                      // No context line here; it shows on hover instead.
-                      <span
-                        className={cn("block truncate text-[13px] text-(--rank-text)", faded && "text-(--rank-muted)")}
-                        title={contextLine(row, metric, totals)}
-                      >
-                        {WSO2_SOURCE_LABELS[row.source]}
-                      </span>
+                      // No context line here; it shows in the hover tooltip instead.
+                      <Tooltip>
+                        <TooltipTrigger
+                          render={
+                            <span
+                              className={cn(
+                                "block truncate text-[13px] text-(--rank-text)",
+                                faded && "text-(--rank-muted)",
+                              )}
+                            />
+                          }
+                        >
+                          {WSO2_SOURCE_LABELS[row.source]}
+                        </TooltipTrigger>
+                        <TooltipContent side="right" className="flex-col items-start gap-0.5">
+                          <span className="font-semibold">{WSO2_SOURCE_LABELS[row.source]}</span>
+                          <span className="opacity-80">{WSO2_SOURCE_DESCRIPTIONS[row.source]}</span>
+                          <span className="opacity-80 tabular-nums">{contextLine(row, metric, totals)}</span>
+                        </TooltipContent>
+                      </Tooltip>
                     )}
                     {/* The bar fills the track minus room for its figure, which sits just past the bar's end. */}
                     <span className={cn("block min-w-0", BAR_CELL_CLASS)} style={{ paddingRight: LABEL_ROOM_PX }}>
