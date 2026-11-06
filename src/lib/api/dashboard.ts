@@ -1,4 +1,4 @@
-import { isPlaceholderSource } from "@/config/wso2-sources";
+import { IPS_PARTS, isPlaceholderSource } from "@/config/wso2-sources";
 import { AUTH_API_BASE_URL } from "@/lib/api/auth-client";
 import { ApiError } from "@/lib/api/client";
 // Dummy data, for working without the backend: uncomment this import and the two
@@ -10,6 +10,7 @@ import type {
   AllAdvancedTotals,
   DailyTransactionParams,
   DailyTransactionTotals,
+  SourceTotals,
 } from "@/types/api";
 
 /**
@@ -46,7 +47,25 @@ export async function getAllAdvanced(params: AllAdvancedParams): Promise<AllAdva
       url,
     );
   }
-  return body.data as AllAdvancedTotals;
+  return mergeIps(body.data as Record<string, SourceTotals>);
+}
+
+/** Adds `a` and `b`, treating a missing side as zero. */
+function addTotals(a: SourceTotals | undefined, b: SourceTotals | undefined): SourceTotals {
+  return {
+    totalTransactions: (a?.totalTransactions ?? 0) + (b?.totalTransactions ?? 0),
+    totalAmount: (a?.totalAmount ?? 0) + (b?.totalAmount ?? 0),
+  };
+}
+
+/** Replaces WSO2's separate IPS sources with one `ips` entry holding their sum. */
+function mergeIps(data: Record<string, SourceTotals>): AllAdvancedTotals {
+  const merged: Record<string, SourceTotals> = { ...data };
+  if (IPS_PARTS.some((part) => part in data)) {
+    merged.ips = IPS_PARTS.reduce((sum, part) => addTotals(sum, data[part]), addTotals(undefined, undefined));
+  }
+  for (const part of IPS_PARTS) delete merged[part];
+  return merged as AllAdvancedTotals;
 }
 
 /** TM backend route for per-day totals, relayed from WSO2 like `ALL_ADVANCED_PATH`. */
@@ -57,10 +76,24 @@ export async function getDailyTransaction(params: DailyTransactionParams): Promi
   // Frontend-only channels: no days means every day counts as 0.
   if (params.source && isPlaceholderSource(params.source)) return {};
 
+  // IPS is two WSO2 sources: fetch both and add them up day by day.
+  if (params.source === "ips") {
+    const parts = await Promise.all(IPS_PARTS.map((part) => fetchDailyTransaction(params, part)));
+    const merged: DailyTransactionTotals = {};
+    for (const part of parts) {
+      for (const [day, totals] of Object.entries(part)) merged[day] = addTotals(merged[day], totals);
+    }
+    return merged;
+  }
+
+  return fetchDailyTransaction(params, params.source ?? "all");
+}
+
+async function fetchDailyTransaction(params: DailyTransactionParams, source: string): Promise<DailyTransactionTotals> {
   const search = new URLSearchParams({
     startDate: params.startDate,
     endDate: params.endDate,
-    source: params.source ?? "all",
+    source,
   });
   const url = `${AUTH_API_BASE_URL}${DAILY_TRANSACTION_PATH}?${search}`;
 

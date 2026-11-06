@@ -3,11 +3,15 @@
 import { ArrowLeftRight, Rows3 } from "lucide-react";
 
 import { PeriodPicker } from "@/components/overview/period-picker";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { COMPARISON_TYPE_LABELS, EARLIEST_DAY, type ComparisonType, type Interval, type SideKey } from "@/lib/comparison";
 import type { DateRange } from "@/lib/date";
 import type { OverviewPeriod } from "@/lib/overview";
 import { cn } from "@/lib/utils";
+
+/** `SideSelect` lists longer than this get a search box. */
+const SEARCH_THRESHOLD = 8;
 
 /** Which side has the larger amount; "even" or null (no figures yet) when neither does. */
 export type SideLeader = SideKey | "even" | null;
@@ -174,6 +178,26 @@ export function SideSelect({
   onChange: (id: string) => void;
 }) {
   const items = Object.fromEntries(options.map((o) => [o.id, o.label]));
+  // Long lists (the channels) get a search box and a capped height.
+  if (options.length > SEARCH_THRESHOLD) {
+    return (
+      <Field label={label}>
+        <SearchableSelect
+          aria-label={label}
+          items={options.map((o) => o.id)}
+          value={value}
+          onValueChange={onChange}
+          getLabel={(id) => items[id] ?? id}
+          disabledValue={disabledId}
+          placeholder="Search channels…"
+          emptyMessage="No channel matches"
+          leading={side && <span className={cn("size-2 shrink-0 rounded-full", sideDotClass(side, leader))} aria-hidden />}
+          // Fixed width so the bar doesn't shift between channels; long names end in "…".
+          className="w-72 shrink-0 border-border pr-2.5 font-semibold max-[760px]:w-full"
+        />
+      </Field>
+    );
+  }
   return (
     <Field label={label}>
       <Select items={items} value={value} onValueChange={(next) => next && onChange(String(next))}>

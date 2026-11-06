@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect } from "react";
-// import { useState } from "react"; // only needed by the disabled sections below
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Radio, Users } from "lucide-react";
 // import {
 //   AlertTriangle,
 //   Mail,
@@ -13,6 +13,7 @@ import { useRouter } from "next/navigation";
 //   type LucideIcon,
 // } from "lucide-react";
 
+import { ChannelConfigCard } from "@/components/settings/channel-config-card";
 import { UserManagementCard } from "@/components/settings/user-management-card";
 // import { Button } from "@/components/ui/button";
 // import { Card, CardContent } from "@/components/ui/card"; // the disabled sections below use Card
@@ -23,6 +24,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 // import { Switch } from "@/components/ui/switch";
 // import { CHANNEL_LIST, type ChannelId } from "@/config/channels";
 import { useMe } from "@/hooks";
+import { cn } from "@/lib/utils";
+
+type SettingsTab = "users" | "channels";
+
+const SETTINGS_TABS: { value: SettingsTab; label: string; icon: typeof Users }[] = [
+  { value: "users", label: "User management", icon: Users },
+  { value: "channels", label: "Channel configuration", icon: Radio },
+];
 
 // interface ChannelThreshold {
 //   failureRatePct: number;
@@ -67,6 +76,7 @@ export default function SettingsPage() {
   useEffect(() => {
     if (isNonAdmin) router.replace("/overview");
   }, [isNonAdmin, router]);
+  const [tab, setTab] = useState<SettingsTab>("users");
   // const user = meQuery.data?.user; // only used by the disabled "Signed in" card below
   // const [thresholds, setThresholds] = useState(DEFAULT_THRESHOLDS);
   // const [notify, setNotify] = useState<Record<NotifyKey, boolean>>({
@@ -115,7 +125,33 @@ export default function SettingsPage() {
       */}
 
       {isAdmin ? (
-        <UserManagementCard />
+        <>
+          {/* Pinned flush to the top border while the content scrolls under it; the negative `top` cancels <main>'s padding. */}
+          <div className="sticky -top-4 z-20 -mx-4 bg-background px-4 py-2 sm:-top-6 sm:-mx-6 sm:px-6">
+            <div className="inline-flex max-w-full rounded-[10px] bg-muted p-1" role="tablist" aria-label="Settings sections">
+              {SETTINGS_TABS.map((option) => {
+                const active = tab === option.value;
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    role="tab"
+                    aria-selected={active}
+                    onClick={() => setTab(option.value)}
+                    className={cn(
+                      "inline-flex h-9 items-center gap-1.5 rounded-lg px-3.5 text-[13px] font-semibold whitespace-nowrap transition-colors focus-visible:outline-2 focus-visible:outline-primary max-[420px]:px-2.5",
+                      active ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    <option.icon className="size-4" />
+                    {option.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          {tab === "users" ? <UserManagementCard /> : <ChannelConfigCard />}
+        </>
       ) : (
         <section className="space-y-4 rounded-2xl border border-border bg-card px-6 py-[22px] max-[620px]:p-[18px]">
           <Skeleton className="h-5 w-48" />

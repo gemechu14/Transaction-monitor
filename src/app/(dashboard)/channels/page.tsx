@@ -24,6 +24,7 @@ import {
 import { usePeriod } from "@/components/providers/period-provider";
 import type { ChannelId } from "@/config/channels";
 import { SourceOption } from "@/components/sources/source-option";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { WSO2_SOURCE_LABELS, WSO2_SOURCES, type Wso2Source } from "@/config/wso2-sources";
 import { useAllAdvanced, useDailyTransaction, useOverviewDataset } from "@/hooks";
 import {
@@ -89,29 +90,18 @@ export default function ChannelsPage() {
 
         {/* On phones: source and ranking side by side, then the period across the full width. */}
         <div className="flex flex-wrap items-center gap-2 max-[620px]:grid max-[620px]:w-full max-[620px]:grid-cols-2">
-          <Select
-            items={WSO2_SOURCE_LABELS}
+          <SearchableSelect
+            aria-label="Source"
+            items={WSO2_SOURCES}
             value={source}
             onValueChange={(value) => setSource(value as Wso2Source)}
-          >
-            <SelectTrigger
-              aria-label="Source"
-              className={cn(
-                "w-48 rounded-[10px] bg-card px-3.5 data-[size=default]:h-10 max-[620px]:w-full",
-                source !== "all" && "max-[620px]:col-span-2",
-              )}
-            >
-              <Layers className="size-4 text-primary-strong" />
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {WSO2_SOURCES.map((id) => (
-                <SelectItem key={id} value={id}>
-                  <SourceOption source={id} />
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            getLabel={(id) => WSO2_SOURCE_LABELS[id as Wso2Source]}
+            renderItem={(id) => <SourceOption source={id as Wso2Source} />}
+            placeholder="Search sources…"
+            emptyMessage="No source matches"
+            leading={<Layers className="size-4 text-primary-strong" />}
+            className={cn("w-48 px-3.5 max-[620px]:w-full", source !== "all" && "max-[620px]:col-span-2")}
+          />
           {source === "all" && (
             <Select items={LIVE_RANK_ITEMS} value={rankBy} onValueChange={(value) => setRankBy(value as LiveRankMetric)}>
               <SelectTrigger

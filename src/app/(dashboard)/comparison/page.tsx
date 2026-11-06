@@ -52,8 +52,12 @@ import {
 import { addDays, parseISODate, toISODate } from "@/lib/date";
 import { countDays, formatRangeLabel } from "@/lib/overview";
 
-const CHANNEL_OPTIONS: FieldOption[] = WSO2_CHANNEL_SOURCES.map((id) => ({ id, label: WSO2_SOURCE_LABELS[id] }));
-const PLATFORM_OPTIONS: FieldOption[] = [{ id: "all", label: WSO2_SOURCE_LABELS.all }, ...CHANNEL_OPTIONS];
+const toOption = (id: Wso2Source): FieldOption => ({ id, label: WSO2_SOURCE_LABELS[id] });
+
+/** Channel vs channel leaves out IPS; the period comparison still offers it. */
+const VS_CHANNEL_SOURCES = WSO2_CHANNEL_SOURCES.filter((id) => id !== "ips");
+const CHANNEL_OPTIONS: FieldOption[] = VS_CHANNEL_SOURCES.map(toOption);
+const PLATFORM_OPTIONS: FieldOption[] = [toOption("all"), ...WSO2_CHANNEL_SOURCES.map(toOption)];
 
 const EMPTY_SIDE: SideFigures = { name: "", amount: null, transactions: null };
 
@@ -70,8 +74,8 @@ export default function ComparisonPage() {
 
   // Channel vs channel: the two largest sources by default.
   const [channels, setChannels] = useState<{ a: Wso2ChannelSource; b: Wso2ChannelSource }>({
-    a: "ips_incoming",
-    b: "telebirrToBank",
+    a: "telebirrToBank",
+    b: "bankToTelebirr",
   });
   // Shared across pages; kept until the user picks another period.
   const { period, setPeriod } = usePeriod();
@@ -216,7 +220,7 @@ export default function ComparisonPage() {
               value={channels.a}
               options={CHANNEL_OPTIONS}
               disabledId={channels.b}
-              onChange={(id) => setChannels((pair) => pickSide(pair, "a", id as Wso2ChannelSource, WSO2_CHANNEL_SOURCES))}
+              onChange={(id) => setChannels((pair) => pickSide(pair, "a", id as Wso2ChannelSource, VS_CHANNEL_SOURCES))}
             />
             <SwapButton label="Swap channels" onClick={() => setChannels(({ a, b }) => ({ a: b, b: a }))} />
             <SideSelect
@@ -226,7 +230,7 @@ export default function ComparisonPage() {
               value={channels.b}
               options={CHANNEL_OPTIONS}
               disabledId={channels.a}
-              onChange={(id) => setChannels((pair) => pickSide(pair, "b", id as Wso2ChannelSource, WSO2_CHANNEL_SOURCES))}
+              onChange={(id) => setChannels((pair) => pickSide(pair, "b", id as Wso2ChannelSource, VS_CHANNEL_SOURCES))}
             />
             <PeriodField value={period} onChange={setPeriod} />
           </>

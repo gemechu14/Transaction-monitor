@@ -15,10 +15,10 @@ import { ArrowLeftRight, Banknote, Receipt, type LucideIcon } from "lucide-react
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   WSO2_CHANNEL_SOURCES,
-  WSO2_SOURCE_DESCRIPTIONS,
   WSO2_SOURCE_LABELS,
   type Wso2Source,
 } from "@/config/wso2-sources";
+import { useSourceDescription } from "@/hooks";
 import type { DateRange } from "@/lib/date";
 import { formatAmountValue, formatNumber } from "@/lib/format";
 import type { SourceRow } from "@/lib/overview";
@@ -179,6 +179,9 @@ function LoadingRows() {
   );
 }
 
+/** How many channels each card lists. */
+const TOP_ROWS = 20;
+
 /** Ranked live totals per WSO2 source, from the same allAdvanced call as the KPIs. */
 export function ChannelPerformanceCard({
   data,
@@ -215,10 +218,15 @@ export function ChannelPerformanceCard({
   );
 
   // Every metric ranks highest first.
+  const describe = useSourceDescription();
   const sorted = useMemo(
     () => [...data].sort((a, b) => metricValue(b, metric) - metricValue(a, metric)),
     [data, metric],
   );
+  // Only the top rows; a selected source further down is kept so its highlight still shows.
+  const visible = sorted.slice(0, TOP_ROWS);
+  const selectedRow = sorted.find((r) => r.source === selected);
+  if (selectedRow && !visible.includes(selectedRow)) visible.push(selectedRow);
   const max = Math.max(0, ...data.map((r) => metricValue(r, metric)));
   // Total line hidden for now; restore together with the footer below.
   // const overall =
@@ -234,7 +242,14 @@ export function ChannelPerformanceCard({
     <section className="inter-ui min-w-0 rounded-[14px] border border-(--cp-border) bg-(--cp-card) px-6 py-[22px] max-[620px]:px-4">
       <header className="mb-3 flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="m-0 text-[15px] font-semibold text-(--rank-text)">Channels by {TITLE[metric].toLowerCase()}</h2>
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="m-0 text-[15px] font-semibold text-(--rank-text)">Channels by {TITLE[metric].toLowerCase()}</h2>
+            {data.length > TOP_ROWS && (
+              <span className="rounded-full bg-primary-soft px-2 py-0.5 text-[11px] font-semibold text-primary-strong">
+                Top {TOP_ROWS}
+              </span>
+            )}
+          </div>
           <p className="mt-[3px] text-[12.5px] text-(--rank-muted)">
             {metric === "volume" ? "Number of transactions" : "Amounts in ETB"}, {formatSubtitleRange(range)}
           </p>
@@ -285,7 +300,8 @@ export function ChannelPerformanceCard({
       ) : (
         <>
           <ol aria-label={`Channels by ${METRIC_LABELS[metric].toLowerCase()}`}>
-            {sorted.map((row, index) => {
+            {visible.map((row) => {
+              const index = sorted.indexOf(row);
               const value = metricValue(row, metric);
               const isSelected = selected === row.source;
               const faded = selected !== "all" && !isSelected;
@@ -332,7 +348,7 @@ export function ChannelPerformanceCard({
                         </TooltipTrigger>
                         <TooltipContent side="right" className="flex-col items-start gap-0.5">
                           <span className="font-semibold">{WSO2_SOURCE_LABELS[row.source]}</span>
-                          <span className="opacity-80">{WSO2_SOURCE_DESCRIPTIONS[row.source]}</span>
+                          <span className="opacity-80">{describe(row.source)}</span>
                           <span className="opacity-80 tabular-nums">{contextLine(row, metric, totals)}</span>
                         </TooltipContent>
                       </Tooltip>

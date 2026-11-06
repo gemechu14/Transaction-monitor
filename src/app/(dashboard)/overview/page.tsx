@@ -15,13 +15,7 @@ import { buildOverviewReport } from "@/components/reports/report-builders";
 // import { StatusDistributionCard } from "@/components/overview/status-distribution-card";
 // import { TopFailingChannelsCard } from "@/components/overview/top-failing-channels-card";
 import { ValueMixCard } from "@/components/overview/value-mix-card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { usePeriod } from "@/components/providers/period-provider";
 import type { ChannelId } from "@/config/channels";
 import { SourceOption } from "@/components/sources/source-option";
@@ -99,26 +93,18 @@ export default function OverviewPage() {
 
         {/* On phones: source across the full width, then period and export on one row. */}
         <div className="flex flex-wrap items-center gap-2 max-[620px]:grid max-[620px]:w-full max-[620px]:grid-cols-[minmax(0,1fr)_auto]">
-          <Select
-            items={WSO2_SOURCE_LABELS}
+          <SearchableSelect
+            aria-label="Source"
+            items={WSO2_SOURCES}
             value={source}
             onValueChange={(value) => setSource(value as Wso2Source)}
-          >
-            <SelectTrigger
-              aria-label="Source"
-              className="w-48 rounded-[10px] bg-card px-3.5 data-[size=default]:h-10 max-[620px]:col-span-2 max-[620px]:w-full"
-            >
-              <Layers className="size-4 text-primary-strong" />
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {WSO2_SOURCES.map((id) => (
-                <SelectItem key={id} value={id}>
-                  <SourceOption source={id} />
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            getLabel={(id) => WSO2_SOURCE_LABELS[id as Wso2Source]}
+            renderItem={(id) => <SourceOption source={id as Wso2Source} />}
+            placeholder="Search sources…"
+            emptyMessage="No source matches"
+            leading={<Layers className="size-4 text-primary-strong" />}
+            className="w-48 px-3.5 max-[620px]:col-span-2 max-[620px]:w-full"
+          />
           <div className="min-w-0 max-[620px]:[&>button]:w-full">
             <PeriodPicker value={period} onChange={setPeriod} dataFrom={dataset?.from} size="sm" />
           </div>

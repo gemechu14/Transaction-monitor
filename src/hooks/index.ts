@@ -13,3 +13,4 @@ export * from "@/hooks/use-daily-transaction";
 export * from "@/hooks/use-auth";
 export * from "@/hooks/use-admin-users";
 export * from "@/hooks/use-media-query";
+export * from "@/hooks/use-channel-info";

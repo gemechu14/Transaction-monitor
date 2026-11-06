@@ -44,12 +44,12 @@ const ROLE_OPTIONS: UserRole[] = ["USER", "ADMIN"];
 const ROLE_ITEMS: Record<UserRole, string> = { USER: "User", ADMIN: "Admin" };
 
 /* Shared control styles: 40px controls, 10px radius. */
-const CONTROL =
+export const CONTROL =
   "h-10 rounded-[10px] border border-border bg-card text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground hover:border-foreground-2 focus-visible:border-primary focus-visible:ring-3 focus-visible:ring-primary/20";
 const BUTTON_BASE =
   "inline-flex h-10 items-center justify-center gap-1.5 rounded-[10px] px-4 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:pointer-events-none disabled:opacity-50";
-const PRIMARY_BUTTON = cn(BUTTON_BASE, "bg-primary font-bold text-white hover:bg-primary/90");
-const OUTLINE_BUTTON = cn(BUTTON_BASE, "border border-border bg-card text-foreground hover:bg-muted");
+export const PRIMARY_BUTTON = cn(BUTTON_BASE, "bg-primary font-bold text-white hover:bg-primary/90");
+export const OUTLINE_BUTTON = cn(BUTTON_BASE, "border border-border bg-card text-foreground hover:bg-muted");
 const DANGER_BUTTON = cn(BUTTON_BASE, "bg-bad text-white hover:bg-bad/90");
 function initialsFor(user: AdminUser): string {
   const source = (user.displayName || user.email).trim();
@@ -70,7 +70,7 @@ function sortForDisplay(users: AdminUser[], currentUserId?: string): AdminUser[]
   );
 }
 
-function DialogIcon({ tone = "primary", children }: { tone?: "primary" | "bad"; children: React.ReactNode }) {
+export function DialogIcon({ tone = "primary", children }: { tone?: "primary" | "bad"; children: React.ReactNode }) {
   return (
     <span
       className={cn(

@@ -12,11 +12,10 @@ import type { AllAdvancedParams, AllAdvancedTotals } from "@/types/api";
  */
 
 const DAILY_PROFILE: Partial<Record<Wso2ChannelSource, { amount: number; transactions: number }>> = {
-  ips_incoming: { amount: 88_000_000, transactions: 8_900 },
+  ips: { amount: 96_400_000, transactions: 9_213 },
   telebirrToBank: { amount: 68_000_000, transactions: 5_600 },
   bankToTelebirr: { amount: 43_000_000, transactions: 730 },
   tas: { amount: 12_000_000, transactions: 300 },
-  ips_push: { amount: 8_400_000, transactions: 313 },
   coopremitOtherBank: { amount: 6_200_000, transactions: 92 },
   coopapp: { amount: 5_100_000, transactions: 1_500 },
   eeu: { amount: 1_200_000, transactions: 610 },

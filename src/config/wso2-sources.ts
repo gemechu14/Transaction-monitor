@@ -1,8 +1,10 @@
-/** Payment sources as keyed in the WSO2 `allAdvanced` response (see ADVANCED_API.md). */
+/**
+ * Payment sources as keyed in the WSO2 `allAdvanced` response (see ADVANCED_API.md),
+ * except `ips`, which the dashboard builds from `IPS_PARTS`.
+ */
 export type Wso2ChannelSource =
   | "tas"
-  | "ips_incoming"
-  | "ips_push"
+  | "ips"
   | "coopapp"
   | "jica"
   | "eeu"
@@ -13,6 +15,9 @@ export type Wso2ChannelSource =
   | "coopremitOtherBank"
   | "terapayOtherBank"
   | PlaceholderSource;
+
+/** WSO2 reports IPS as two sources; the dashboard adds them up into one `ips` channel. */
+export const IPS_PARTS = ["ips_incoming", "ips_push"] as const;
 
 /**
  * Channels shown on the dashboard before WSO2 reports them: always zero, and
@@ -60,8 +65,7 @@ export type Wso2Source = Wso2ChannelSource | "all";
 export const WSO2_SOURCE_LABELS: Record<Wso2Source, string> = {
   all: "All sources",
   tas: "TAS",
-  ips_incoming: "IPS Incoming",
-  ips_push: "IPS Push",
+  ips: "IPS",
   coopapp: "CoopApp",
   jica: "JICA",
   eeu: "EEU",
@@ -108,8 +112,7 @@ export const WSO2_SOURCE_LABELS: Record<Wso2Source, string> = {
 export const WSO2_SOURCE_DESCRIPTIONS: Record<Wso2Source, string> = {
   all: "Every source combined",
   tas: "TAS transactions",
-  ips_incoming: "Instant payments received from other banks",
-  ips_push: "Instant payments sent to other banks",
+  ips: "Instant payments to and from other banks",
   coopapp: "Payments made in the CoopApp mobile app",
   jica: "JICA programme payments",
   eeu: "Ethiopian Electric Utility bill payments",
@@ -165,8 +168,7 @@ export const WSO2_CHANNEL_SOURCES = WSO2_SOURCES.filter(
 /** One- or two-letter badge text for ranked lists. */
 export const WSO2_SOURCE_INITIALS: Record<Wso2ChannelSource, string> = {
   tas: "TA",
-  ips_incoming: "II",
-  ips_push: "IP",
+  ips: "IP",
   coopapp: "CA",
   jica: "JI",
   eeu: "EU",

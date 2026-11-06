@@ -36,7 +36,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} ${inter.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-background text-foreground">
+      {/* Browser extensions (e.g. Grammarly) add attributes to <body> before React loads. */}
+      <body suppressHydrationWarning className="min-h-full flex flex-col bg-background text-foreground">
         <ThemeProvider>
           <QueryProvider>
             <TooltipProvider delay={200}>{children}</TooltipProvider>

@@ -13,6 +13,7 @@ const nextConfig: NextConfig = {
       { source: "/api/auth/:path*", destination: `${authBackend}/api/auth/:path*` },
       { source: "/api/admin/:path*", destination: `${authBackend}/api/admin/:path*` },
       { source: "/api/dashboard/:path*", destination: `${authBackend}/api/dashboard/:path*` },
+      { source: "/api/channels", destination: `${authBackend}/api/channels` },
     ];
   },
 };
