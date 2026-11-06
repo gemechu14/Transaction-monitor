@@ -27,6 +27,14 @@ const ROW_CLASS = "flex w-full items-center gap-2.5 rounded-lg px-2 py-[7px] tex
 const TOP_COUNT = 5;
 const OTHERS = "others";
 
+/** One Coopbank-brand colour per named slice, largest first (see `--donut-*` in globals.css). */
+const SLICE_COLORS = ["var(--donut-1)", "var(--donut-2)", "var(--donut-3)", "var(--donut-4)", "var(--donut-5)"];
+
+/** Named slices by rank; Others is drawn grey so it reads as a remainder, not a channel. */
+function sliceColor(key: SliceKey, index: number): string {
+  return key === OTHERS ? "var(--donut-others)" : SLICE_COLORS[index % SLICE_COLORS.length];
+}
+
 type SliceKey = Wso2ChannelSource | typeof OTHERS;
 
 interface Slice {
@@ -137,6 +145,7 @@ export function DistributionByChannelCard({
 
   const arcs = slices.map((slice, index) => ({
     slice,
+    color: sliceColor(slice.key, index),
     length: share(slice) * CIRCUMFERENCE,
     offset: slices.slice(0, index).reduce((acc, s) => acc + share(s) * CIRCUMFERENCE, 0),
   }));
@@ -159,7 +168,7 @@ export function DistributionByChannelCard({
               )}
               {arcs
                 .filter(({ length }) => length > 0)
-                .map(({ slice, length, offset: start }) => {
+                .map(({ slice, color, length, offset: start }) => {
                   const isFocused = focused === slice.key;
                   return (
                     <circle
@@ -168,8 +177,7 @@ export function DistributionByChannelCard({
                       cy={SIZE / 2}
                       r={RADIUS}
                       fill="none"
-                      // Others is drawn lighter so it reads as a remainder, not a channel.
-                      stroke={slice.key === OTHERS ? "var(--donut-others)" : "var(--primary)"}
+                      stroke={color}
                       strokeWidth={isFocused ? STROKE_FOCUSED : STROKE}
                       strokeDasharray={`${Math.max(0, length - GAP)} ${CIRCUMFERENCE}`}
                       strokeDashoffset={-start}
@@ -196,7 +204,7 @@ export function DistributionByChannelCard({
           </div>
 
           <ul className="min-w-0 flex-1 space-y-1">
-            {slices.map((slice) => {
+            {slices.map((slice, index) => {
               const isOthers = slice.key === OTHERS;
               const isSelected = selectedKey === slice.key;
               return (
@@ -220,7 +228,7 @@ export function DistributionByChannelCard({
                     {/* Same colour as the slice; the initials badges are gone to match the channel cards. */}
                     <span
                       className="size-2.5 shrink-0 rounded-full"
-                      style={{ backgroundColor: isOthers ? "var(--donut-others)" : "var(--primary)" }}
+                      style={{ backgroundColor: sliceColor(slice.key, index) }}
                       aria-hidden
                     />
                     <span className="min-w-0 flex-1 truncate text-foreground">

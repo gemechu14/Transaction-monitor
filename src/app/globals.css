@@ -155,7 +155,13 @@
   --cp-track: #e8edf3;
   --cp-card: #ffffff;
   --cp-border: #e5e7eb;
-  --donut-others: #9bdcf7;
+  --donut-others: #d0d5dd;
+  /* Donut slices: Coopbank blue and orange, then their darker and lighter shades. */
+  --donut-1: #00adef;
+  --donut-2: #f8953f;
+  --donut-3: #0b5e8a;
+  --donut-4: #a8540f;
+  --donut-5: #7fd3f5;
   --value-mix-2: #0073a6;
 }
 
@@ -232,7 +238,13 @@
   --cp-track: #1f2b40;
   --cp-card: #111a2b;
   --cp-border: #243049;
-  --donut-others: #2b6f96;
+  --donut-others: #475467;
+  /* Donut slices: Coopbank blue and orange, then their darker and lighter shades. */
+  --donut-1: #00adef;
+  --donut-2: #f8953f;
+  --donut-3: #4c9fd6;
+  --donut-4: #d9762a;
+  --donut-5: #8fdcf8;
   --value-mix-2: #7dd3fc;
 }
 
