@@ -18,7 +18,7 @@ import {
   WSO2_SOURCE_LABELS,
   type Wso2Source,
 } from "@/config/wso2-sources";
-import { useSourceDescription } from "@/hooks";
+import { useSourceDescription, useSourceOwners } from "@/hooks";
 import type { DateRange } from "@/lib/date";
 import { formatAmountValue, formatNumber } from "@/lib/format";
 import type { SourceRow } from "@/lib/overview";
@@ -219,6 +219,7 @@ export function ChannelPerformanceCard({
 
   // Every metric ranks highest first.
   const describe = useSourceDescription();
+  const ownersOf = useSourceOwners();
   const sorted = useMemo(
     () => [...data].sort((a, b) => metricValue(b, metric) - metricValue(a, metric)),
     [data, metric],
@@ -349,6 +350,7 @@ export function ChannelPerformanceCard({
                         <TooltipContent side="right" className="flex-col items-start gap-0.5">
                           <span className="font-semibold">{WSO2_SOURCE_LABELS[row.source]}</span>
                           <span className="opacity-80">{describe(row.source)}</span>
+                          <span className="opacity-80">Owners: {ownersOf(row.source)}</span>
                           <span className="opacity-80 tabular-nums">{contextLine(row, metric, totals)}</span>
                         </TooltipContent>
                       </Tooltip>

@@ -1,7 +1,14 @@
 "use client";
 
 import { useRef, useState, type FormEvent } from "react";
-import { CalendarClock, Loader2, Pencil, Search } from "lucide-react";
+import {
+  CalendarClock,
+  Loader2,
+  Pencil,
+  Plus,
+  Search,
+  Trash2,
+} from "lucide-react";
 
 import {
   CONTROL,
@@ -18,6 +25,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -44,8 +56,15 @@ import {
 } from "@/config/wso2-sources";
 import { useChannelInfo, useUpdateChannelInfo } from "@/hooks";
 import { AuthApiError } from "@/lib/api/auth-client";
+import {
+  MAX_OWNERS,
+  MAX_OWNER_EMAIL,
+  MAX_OWNER_NAME,
+  namedOwners,
+  ownerLabel,
+} from "@/lib/channel-owners";
 import { cn } from "@/lib/utils";
-import type { ChannelInfo, ChannelType } from "@/types/channels";
+import type { ChannelInfo, ChannelOwner, ChannelType } from "@/types/channels";
 
 type TypeFilter = "all" | ChannelType;
 
@@ -56,9 +75,24 @@ const TYPE_FILTER_ITEMS: Record<TypeFilter, string> = {
 
 /** Matches the backend's limits. */
 const MAX_DESCRIPTION = 300;
-const MAX_OWNER_NAME = 120;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const EMAIL_ERROR = "Enter a valid owner email, or leave it empty.";
+
+/** An owner row in the edit dialog; `id` is local only. */
+interface OwnerRow {
+  id: number;
+  name: string;
+  email: string;
+}
+
+// Each row gets a unique id so React keeps focus and input in the right row when one above is removed.
+let ownerRowSeq = 0;
+function newOwnerRow(owner?: ChannelOwner): OwnerRow {
+  return {
+    id: ownerRowSeq++,
+    name: owner?.name ?? "",
+    email: owner?.email ?? "",
+  };
+}
 
 const LABEL = "text-[13px] font-medium text-foreground-2";
 
@@ -75,20 +109,55 @@ function EditChannelDialog({
 }) {
   // Starts from the saved values; the row remounts this dialog on every open (see `openCount`).
   const [description, setDescription] = useState(info?.description ?? "");
-  const [ownerName, setOwnerName] = useState(info?.ownerName ?? "");
-  const [ownerEmail, setOwnerEmail] = useState(info?.ownerEmail ?? "");
+  const [owners, setOwners] = useState<OwnerRow[]>(() => {
+    const saved = namedOwners(info?.owners);
+    // One empty row to type into when there are no owners yet.
+    return saved.length ? saved.map(newOwnerRow) : [newOwnerRow()];
+  });
   const [type, setType] = useState<ChannelType>(channelType(info));
   const [months, setMonths] = useState<number[]>(info?.activeMonths ?? []);
   const [error, setError] = useState<string | null>(null);
+  /** Row ids whose email is invalid or repeated, outlined in red. */
+  const [badEmails, setBadEmails] = useState<Set<number>>(new Set());
   const caretPlaced = useRef(false);
   const updateMutation = useUpdateChannelInfo();
   const label = WSO2_SOURCE_LABELS[source];
 
+  const updateOwner = (id: number, field: "name" | "email", value: string) => {
+    setOwners((rows) =>
+      rows.map((r) => (r.id === id ? { ...r, [field]: value } : r)),
+    );
+    if (field === "email" && badEmails.has(id)) {
+      setBadEmails((ids) => new Set([...ids].filter((x) => x !== id)));
+    }
+  };
+
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    const email = ownerEmail.trim();
-    if (email && !EMAIL_PATTERN.test(email)) {
-      setError(EMAIL_ERROR);
+
+    // Same rules as the backend, so most mistakes are caught before the round trip.
+    const seen = new Map<string, number>();
+    const invalid = new Set<number>();
+    let message: string | null = null;
+    for (const row of owners) {
+      const email = row.email.trim();
+      if (!email) continue;
+      if (!EMAIL_PATTERN.test(email)) {
+        invalid.add(row.id);
+        message ??= `"${email}" isn't a valid email.`;
+        continue;
+      }
+      const key = email.toLowerCase();
+      if (seen.has(key)) {
+        invalid.add(row.id).add(seen.get(key)!);
+        message ??= `${email} is listed more than once.`;
+      } else {
+        seen.set(key, row.id);
+      }
+    }
+    setBadEmails(invalid);
+    if (message) {
+      setError(message);
       return;
     }
     if (type === "seasonal" && months.length === 0) {
@@ -101,8 +170,11 @@ function EditChannelDialog({
         source,
         payload: {
           description: description.trim(),
-          ownerName: ownerName.trim(),
-          ownerEmail: email,
+          // The whole list, in display order; the backend drops rows with neither field.
+          owners: owners.map((row) => ({
+            name: row.name.trim() || null,
+            email: row.email.trim() || null,
+          })),
           channelType: type,
           // Months only mean something for a seasonal channel; clear them otherwise.
           activeMonths:
@@ -131,7 +203,7 @@ function EditChannelDialog({
               Edit {label}
             </DialogTitle>
             <DialogDescription className="text-[13px]">
-              Set the channel&apos;s type and owner. The description shows when
+              Set the channel&apos;s type and owners. The description shows when
               people hover over this channel on the dashboard.
             </DialogDescription>
           </div>
@@ -249,44 +321,81 @@ function EditChannelDialog({
             </p>
           </div>
 
-          <div className="flex flex-col gap-5">
-            <div className="space-y-1.5">
-              <label htmlFor={`channel-owner-name-${source}`} className={LABEL}>
-                Owner name
-              </label>
-              <input
-                id={`channel-owner-name-${source}`}
-                autoComplete="off"
-                maxLength={MAX_OWNER_NAME}
-                placeholder="Full name"
-                className={cn(CONTROL, "w-full px-3")}
-                value={ownerName}
-                onChange={(event) => setOwnerName(event.target.value)}
-              />
+          <fieldset className="space-y-2">
+            <div className="flex items-baseline justify-between gap-2">
+              <legend className={LABEL}>Owners</legend>
+              <span className="text-xs text-muted-foreground tabular-nums">
+                {owners.length}/{MAX_OWNERS}
+              </span>
             </div>
-            <div className="space-y-1.5">
-              <label
-                htmlFor={`channel-owner-email-${source}`}
-                className={LABEL}
-              >
-                Owner email
-              </label>
-              <input
-                id={`channel-owner-email-${source}`}
-                type="email"
-                autoComplete="off"
-                placeholder="name@coopbankoromiasc.com"
-                aria-invalid={error === EMAIL_ERROR}
-                className={cn(
-                  CONTROL,
-                  "w-full px-3",
-                  error === EMAIL_ERROR && "border-bad hover:border-bad",
-                )}
-                value={ownerEmail}
-                onChange={(event) => setOwnerEmail(event.target.value)}
-              />
-            </div>
-          </div>
+            {owners.length === 0 && (
+              <p className="rounded-[10px] bg-muted px-3 py-2.5 text-[13px] text-muted-foreground">
+                No owners. Saving now clears them.
+              </p>
+            )}
+            {owners.map((row, index) => {
+              const bad = badEmails.has(row.id);
+              return (
+                <div key={row.id} className="flex items-start gap-2">
+                  <div className="grid min-w-0 flex-1 grid-cols-2 gap-2 max-[480px]:grid-cols-1">
+                    <input
+                      aria-label={`Owner ${index + 1} name`}
+                      autoComplete="off"
+                      maxLength={MAX_OWNER_NAME}
+                      placeholder="Full name"
+                      className={cn(CONTROL, "w-full min-w-0 px-3")}
+                      value={row.name}
+                      onChange={(event) =>
+                        updateOwner(row.id, "name", event.target.value)
+                      }
+                    />
+                    <input
+                      aria-label={`Owner ${index + 1} email`}
+                      type="email"
+                      autoComplete="off"
+                      maxLength={MAX_OWNER_EMAIL}
+                      placeholder="name@coopbankoromiasc.com"
+                      aria-invalid={bad}
+                      className={cn(
+                        CONTROL,
+                        "w-full min-w-0 px-3",
+                        bad && "border-bad hover:border-bad",
+                      )}
+                      value={row.email}
+                      onChange={(event) =>
+                        updateOwner(row.id, "email", event.target.value)
+                      }
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    aria-label={`Remove owner ${index + 1}`}
+                    title="Remove owner"
+                    onClick={() => {
+                      setOwners((rows) => rows.filter((r) => r.id !== row.id));
+                      setBadEmails(
+                        (ids) => new Set([...ids].filter((x) => x !== row.id)),
+                      );
+                    }}
+                    className="inline-flex size-10 shrink-0 items-center justify-center rounded-[10px] text-muted-foreground transition-colors hover:bg-bad-soft hover:text-bad focus-visible:outline-2 focus-visible:outline-primary"
+                  >
+                    <Trash2 className="size-4" />
+                  </button>
+                </div>
+              );
+            })}
+            <button
+              type="button"
+              disabled={owners.length >= MAX_OWNERS}
+              onClick={() => setOwners((rows) => [...rows, newOwnerRow()])}
+              className={cn(OUTLINE_BUTTON, "h-9 w-full border-dashed")}
+            >
+              <Plus className="size-4" />
+              {owners.length >= MAX_OWNERS
+                ? `Up to ${MAX_OWNERS} owners`
+                : "Add owner"}
+            </button>
+          </fieldset>
           {error && (
             <p role="alert" className="-mt-2 text-[13px] font-medium text-bad">
               {error}
@@ -346,6 +455,116 @@ function TypePill({
   );
 }
 
+/** One owner: the name (or the email when there is none), linked to their email when they have one. */
+function OwnerName({ owner }: { owner: ChannelOwner }) {
+  return owner.email ? (
+    <a
+      href={`mailto:${owner.email}`}
+      title={owner.email}
+      className="hover:text-primary-strong hover:underline"
+    >
+      {ownerLabel(owner)}
+    </a>
+  ) : (
+    <span>{ownerLabel(owner)}</span>
+  );
+}
+
+/**
+ * The first two owners, then a "+N" that opens the full list (on hover or click) with each
+ * email as a mailto link. `stacked` puts each owner on its own line (the table column);
+ * otherwise they run inline, "Abebe Kebede, Hana T. +1" (the phone layout).
+ */
+function OwnerList({
+  owners,
+  className,
+  shown = 2,
+  stacked = false,
+}: {
+  owners: ChannelOwner[];
+  className?: string;
+  shown?: number;
+  stacked?: boolean;
+}) {
+  const visible = owners.slice(0, shown);
+  const more = owners.length > shown && (
+    <AllOwners owners={owners} rest={owners.length - shown} />
+  );
+
+  if (stacked) {
+    return (
+      <ul className={cn("min-w-0 space-y-0.5", className)}>
+        {visible.map((owner, i) => (
+          <li
+            key={`${ownerLabel(owner)}-${i}`}
+            className="flex min-w-0 items-center"
+          >
+            <span className="min-w-0 truncate">
+              <OwnerName owner={owner} />
+            </span>
+            {/* The "+N" sits at the end of the last line, so two lines are the most a row grows. */}
+            {i === visible.length - 1 && more}
+          </li>
+        ))}
+      </ul>
+    );
+  }
+
+  return (
+    <p className={cn("min-w-0", className)}>
+      {visible.map((owner, i) => (
+        <span key={`${ownerLabel(owner)}-${i}`}>
+          {i > 0 && ", "}
+          <OwnerName owner={owner} />
+        </span>
+      ))}
+      {more}
+    </p>
+  );
+}
+
+/** "+N" badge; hover or click lists every owner with their email. */
+function AllOwners({ owners, rest }: { owners: ChannelOwner[]; rest: number }) {
+  return (
+    <Popover>
+      <PopoverTrigger
+        openOnHover
+        delay={150}
+        closeDelay={200}
+        aria-label={`Show all ${owners.length} owners`}
+        className="ml-1.5 shrink-0 rounded-full bg-muted px-1.5 py-px text-[11px] font-semibold text-foreground-2 hover:bg-primary-soft hover:text-primary-strong focus-visible:outline-2 focus-visible:outline-primary"
+      >
+        +{rest}
+      </PopoverTrigger>
+      <PopoverContent
+        align="start"
+        className="w-72 max-w-[calc(100vw-32px)] p-0"
+      >
+        <p className="border-b border-line-soft px-3 py-2 text-xs font-semibold text-foreground">
+          {owners.length} owners
+        </p>
+        <ul className="max-h-72 divide-y divide-line-soft overflow-y-auto">
+          {owners.map((owner, i) => (
+            <li key={`${ownerLabel(owner)}-${i}`} className="px-3 py-2">
+              <p className="truncate text-[13px] font-medium text-foreground">
+                {owner.name || "—"}
+              </p>
+              {owner.email && (
+                <a
+                  href={`mailto:${owner.email}`}
+                  className="block truncate text-xs text-muted-foreground hover:text-primary-strong hover:underline"
+                >
+                  {owner.email}
+                </a>
+              )}
+            </li>
+          ))}
+        </ul>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 function ChannelRow({
   source,
   info,
@@ -358,7 +577,7 @@ function ChannelRow({
   const [openCount, setOpenCount] = useState(0);
   const label = WSO2_SOURCE_LABELS[source];
   const custom = info?.description;
-  const owner = info?.ownerName || info?.ownerEmail;
+  const owners = namedOwners(info?.owners);
 
   return (
     <tr className="h-16 transition-colors hover:bg-muted">
@@ -384,10 +603,13 @@ function ChannelRow({
             <p className="mt-0.5 hidden text-[13px] text-muted-foreground max-[640px]:line-clamp-2">
               {custom || WSO2_SOURCE_DESCRIPTIONS[source]}
             </p>
-            {owner && (
-              <p className="hidden truncate text-xs text-foreground-2 max-[640px]:block">
-                Owner: {owner}
-              </p>
+            {owners.length > 0 && (
+              <div className="mt-0.5 hidden text-xs text-foreground-2 max-[640px]:flex max-[640px]:gap-1">
+                <span className="shrink-0">
+                  {owners.length === 1 ? "Owner:" : "Owners:"}
+                </span>
+                <OwnerList owners={owners} />
+              </div>
             )}
           </div>
         </div>
@@ -409,22 +631,14 @@ function ChannelRow({
         )}
       </td>
       <td className="px-4 max-[640px]:hidden">
-        {owner ? (
-          <div className="min-w-0">
-            <p className="truncate text-sm font-medium text-foreground">
-              {info?.ownerName || "—"}
-            </p>
-            {info?.ownerEmail && (
-              <a
-                href={`mailto:${info.ownerEmail}`}
-                className="block truncate text-[13px] text-muted-foreground hover:text-primary-strong hover:underline"
-              >
-                {info.ownerEmail}
-              </a>
-            )}
-          </div>
+        {owners.length ? (
+          <OwnerList
+            owners={owners}
+            stacked
+            className="text-sm font-medium text-foreground"
+          />
         ) : (
-          <span className="text-[13px] text-muted-foreground">No owner</span>
+          <span className="text-[13px] text-muted-foreground">—</span>
         )}
       </td>
       <td className="pr-6 pl-4 text-right max-[640px]:pr-3 max-[640px]:pl-0">
@@ -467,8 +681,7 @@ export function ChannelConfigCard() {
     return [
       WSO2_SOURCE_LABELS[source],
       saved?.description,
-      saved?.ownerName,
-      saved?.ownerEmail,
+      ...(saved?.owners ?? []).flatMap((o) => [o.name, o.email]),
       CHANNEL_TYPE_LABELS[type],
     ].some((text) => text?.toLowerCase().includes(query));
   });
@@ -556,7 +769,7 @@ export function ChannelConfigCard() {
                 scope="col"
                 className="w-[24%] px-4 py-2.5 font-semibold max-[640px]:hidden"
               >
-                Owner
+                Owners
               </th>
               <th
                 scope="col"

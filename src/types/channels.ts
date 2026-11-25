@@ -3,8 +3,8 @@ export interface ChannelInfo {
   /** The channel's source id, e.g. "ips". */
   source: string;
   description: string | null;
-  ownerName: string | null;
-  ownerEmail: string | null;
+  /** In display order; [] when none. */
+  owners: ChannelOwner[];
   /** When customers pay; missing or null means "normal" (real-time, no regular peak). */
   channelType?: ChannelType | null;
   /** Months 1–12 a seasonal channel is active in; only used when `channelType` is "seasonal". */
@@ -17,8 +17,8 @@ export interface ChannelInfo {
 /** Fields an admin can change; `null` or "" clears one, a missing field is left as is. */
 export interface UpdateChannelInfoPayload {
   description?: string | null;
-  ownerName?: string | null;
-  ownerEmail?: string | null;
+  /** Replaces the whole list, in display order; [] clears it. Rows with neither field are dropped. */
+  owners?: ChannelOwner[];
   channelType?: ChannelType | null;
   activeMonths?: number[] | null;
 }
@@ -29,3 +29,9 @@ export interface UpdateChannelInfoPayload {
  */
 export type ChannelType =
   "normal" | "nightly" | "monthly" | "yearly" | "seasonal";
+
+/** One owner of a channel; the backend requires a name or an email. */
+export interface ChannelOwner {
+  name: string | null;
+  email: string | null;
+}

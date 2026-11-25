@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { WSO2_SOURCE_DESCRIPTIONS, type Wso2Source } from "@/config/wso2-sources";
 import { listChannelInfo, updateChannelInfo } from "@/lib/api/channels";
+import { formatOwnerSummary } from "@/lib/channel-owners";
 import type { UpdateChannelInfoPayload } from "@/types/channels";
 
 const CHANNEL_INFO_QUERY_KEY = ["channel-info"] as const;
@@ -33,6 +34,12 @@ export function useSourceDescription() {
     (source: Wso2Source) => data?.[source]?.description || WSO2_SOURCE_DESCRIPTIONS[source],
     [data],
   );
+}
+
+/** A source's owners for hover text, e.g. "Abebe Kebede, Hana T. +1"; "—" when none or not loaded. */
+export function useSourceOwners() {
+  const { data } = useChannelInfo();
+  return useCallback((source: Wso2Source) => formatOwnerSummary(data?.[source]?.owners), [data]);
 }
 
 export function useUpdateChannelInfo() {
